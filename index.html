@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="fr">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.2';
+    const APP_VERSION = '1.0.3';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -27,10 +27,8 @@
   <link rel="preconnect" href="https://i.postimg.cc" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <script>
-    document.write(`<link rel="manifest" href="${MANIFEST_URL}">`);
-    document.write(`<link rel="apple-touch-icon" href="${ICON_192_URL}">`);
-  </script>
+ <link id="manifest-link" rel="manifest" href="">
+<link id="apple-touch-icon-link" rel="apple-touch-icon" href="">
 
   <meta name="theme-color" content="#0F0F0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -621,7 +619,7 @@
       <span class="lang-flag">🇪🇸</span>
     </button>
     <button class="lang-btn" data-lang="en" title="English" aria-label="English">
-      <span class="lang-label">GB</span>
+ <span class="lang-label">EN</span>
       <span class="lang-flag">🇬🇧</span>
     </button>
     <button class="lang-btn" data-lang="nl" title="Nederlands" aria-label="Nederlands">
@@ -633,7 +631,7 @@
   <div id="app-wrapper" class="w-full min-h-screen bg-dark text-cream">
     <header class="relative overflow-hidden pt-12 pb-8 px-6 text-center animate-fade-up">
       <div id="logo-container" class="mx-auto w-56 h-56 flex items-center justify-center rounded-lg border-2 border-dashed border-gold/30" style="background: rgba(242, 199, 68, 0.03);">
-        <p class="text-xs text-cream/30 text-center px-4">Insérez votre logo complet ici</p>
+    <p class="text-xs text-cream/30 text-center px-4"></p>
       </div>
     </header>
   </div>
@@ -1155,10 +1153,21 @@ mariniere: { name: 'Mosselen marinière', subtitle: 'De klassieke mosselen met f
 
     const supportedLangs = ['fr', 'es', 'en', 'nl'];
 
-    function detectLanguage() {
-      const browserLang = (navigator.language || navigator.userLanguage || 'es').substring(0, 2).toLowerCase();
-      return supportedLangs.includes(browserLang) ? browserLang : 'es';
-    }
+function detectLanguage() {
+  const urlLang = new URLSearchParams(window.location.search).get('lang');
+  if (urlLang && supportedLangs.includes(urlLang)) {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, urlLang);
+    return urlLang;
+  }
+
+  const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (savedLang && supportedLangs.includes(savedLang)) {
+    return savedLang;
+  }
+
+  const browserLang = (navigator.language || navigator.userLanguage || 'es').substring(0, 2).toLowerCase();
+  return supportedLangs.includes(browserLang) ? browserLang : 'es';
+}
 
 let currentLang = detectLanguage();
 let deferredInstallPrompt = null;
@@ -1173,6 +1182,7 @@ let cartPanelOpen = false;
 
 const VERSION_STORAGE_KEY = 'tapcarta-last-loaded-version';
 const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
+const LANGUAGE_STORAGE_KEY = 'tapcarta-selected-language';
 
     function isIos() {
       return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -1736,7 +1746,8 @@ function scrollToAddress() {
 
     function renderMenu() {
       const t = translations[currentLang];
-      const wrapper = document.getElementById('app-wrapper');
+   const wrapper = document.getElementById('app-wrapper');
+document.documentElement.lang = currentLang;
 
       const menuHTML = `
         ${renderCategory('snacks', t.snacks, t)}
@@ -1979,8 +1990,8 @@ ${!orderMode ? `
     target="_blank"
     rel="noopener noreferrer"
     class="brand-card flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border-2 border-gold/40 shadow-lg hover:bg-white/10 hover:border-gold/60 transition-all duration-300 cursor-pointer"
-    title="Découvrir TapCarta"
-    aria-label="Découvrir TapCarta"
+title="${t.discoverTapCarta}"
+aria-label="${t.discoverTapCarta}"
   >
     <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold/30 bg-white">
       <img
@@ -2107,6 +2118,17 @@ async function registerFreshServiceWorker() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const manifestLink = document.getElementById('manifest-link');
+  const appleTouchIconLink = document.getElementById('apple-touch-icon-link');
+
+  if (manifestLink) {
+    manifestLink.href = MANIFEST_URL;
+  }
+
+  if (appleTouchIconLink) {
+    appleTouchIconLink.href = ICON_192_URL;
+  }
+
   const reloadingForFreshVersion = ensureFreshHtmlVersion();
   if (reloadingForFreshVersion) return;
 
@@ -2119,9 +2141,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lang = e.currentTarget.dataset.lang;
       if (!supportedLangs.includes(lang)) return;
 
-      currentLang = lang;
-      renderMenu();
-      window.scrollTo({ top: 0, behavior: 'auto' });
+currentLang = lang;
+localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+renderMenu();
+window.scrollTo({ top: 0, behavior: 'auto' });
     });
   });
 });

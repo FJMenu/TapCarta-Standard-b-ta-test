@@ -1473,6 +1473,35 @@ function updateOrderFormField(field, value) {
   };
 }
 
+function getHourOptions() {
+  return Array.from({ length: 24 }, (_, index) =>
+    String(index).padStart(2, '0')
+  );
+}
+
+function getMinuteOptions() {
+  return ['00', '10', '20', '30', '40', '50'];
+}
+
+function getOrderFormTimeParts() {
+  const [hours = '00', minutes = '00'] = (orderForm.time || '00:00').split(':');
+  return { hours, minutes };
+}
+
+function updateOrderFormTimePart(part, value) {
+  const currentParts = getOrderFormTimeParts();
+
+  const nextHours = part === 'hours' ? value : currentParts.hours;
+  const nextMinutes = part === 'minutes' ? value : currentParts.minutes;
+
+  orderForm = {
+    ...orderForm,
+    time: `${nextHours}:${nextMinutes}`
+  };
+
+  renderMenu();
+}
+
 function scrollToAddress() {
   const target = document.getElementById('address-section');
   if (target) {
@@ -1517,7 +1546,34 @@ function initializeOrderForm() {
     note: ''
   };
 }
+function getHourOptions() {
+  return Array.from({ length: 24 }, (_, index) =>
+    String(index).padStart(2, '0')
+  );
+}
 
+function getMinuteOptions() {
+  return ['00', '10', '20', '30', '40', '50'];
+}
+
+function getOrderFormTimeParts() {
+  const [hours = '00', minutes = '00'] = (orderForm.time || '00:00').split(':');
+  return { hours, minutes };
+}
+
+function updateOrderFormTimePart(part, value) {
+  const currentParts = getOrderFormTimeParts();
+
+  const nextHours = part === 'hours' ? value : currentParts.hours;
+  const nextMinutes = part === 'minutes' ? value : currentParts.minutes;
+
+  orderForm = {
+    ...orderForm,
+    time: `${nextHours}:${nextMinutes}`
+  };
+
+  renderMenu();
+}
     function getAllergenIconSVG(key, color) {
       const baseStyle = `style="color:${color}" aria-hidden="true"`;
 
@@ -1942,17 +1998,42 @@ document.documentElement.lang = currentLang;
                   >
                 </div>
 
-                <div>
+         <div>
   <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormTime}</label>
-  <input
-    type="time"
-    step="600"
-    value="${orderForm.time}"
-    oninput="updateOrderFormField('time', this.value)"
-    class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream focus:outline-none focus:border-gold/50"
-  >
+  <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+    <div class="relative">
+      <select
+        onchange="updateOrderFormTimePart('hours', this.value)"
+        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
+      >
+        ${getHourOptions().map(hour => {
+          const selected = getOrderFormTimeParts().hours === hour ? 'selected' : '';
+          return `<option value="${hour}" ${selected}>${hour}</option>`;
+        }).join('')}
+      </select>
+      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+        <i data-lucide="clock-3" class="w-4 h-4 text-gold"></i>
+      </div>
+    </div>
+
+    <span class="text-gold font-semibold">:</span>
+
+    <div class="relative">
+      <select
+        onchange="updateOrderFormTimePart('minutes', this.value)"
+        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
+      >
+        ${getMinuteOptions().map(minute => {
+          const selected = getOrderFormTimeParts().minutes === minute ? 'selected' : '';
+          return `<option value="${minute}" ${selected}>${minute}</option>`;
+        }).join('')}
+      </select>
+      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+        <i data-lucide="chevron-down" class="w-4 h-4 text-gold"></i>
+      </div>
+    </div>
+  </div>
 </div>
-              </div>
 
               <div>
                 <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormNote}</label>

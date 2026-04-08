@@ -1482,17 +1482,27 @@ function scrollToAddress() {
 
 function getDefaultOrderDateTime() {
   const now = new Date();
-  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+  const target = new Date(now.getTime() + 60 * 60 * 1000);
 
-  const year = oneHourLater.getFullYear();
-  const month = String(oneHourLater.getMonth() + 1).padStart(2, '0');
-  const day = String(oneHourLater.getDate()).padStart(2, '0');
-  const hours = String(oneHourLater.getHours()).padStart(2, '0');
-  const minutes = String(oneHourLater.getMinutes()).padStart(2, '0');
+  const minutes = target.getMinutes();
+  const roundedMinutes = Math.ceil(minutes / 10) * 10;
+
+  if (roundedMinutes === 60) {
+    target.setHours(target.getHours() + 1);
+    target.setMinutes(0, 0, 0);
+  } else {
+    target.setMinutes(roundedMinutes, 0, 0);
+  }
+
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  const hours = String(target.getHours()).padStart(2, '0');
+  const finalMinutes = String(target.getMinutes()).padStart(2, '0');
 
   return {
     date: `${year}-${month}-${day}`,
-    time: `${hours}:${minutes}`
+    time: `${hours}:${finalMinutes}`
   };
 }
 

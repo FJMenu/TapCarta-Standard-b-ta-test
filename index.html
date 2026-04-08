@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.3';
+    const APP_VERSION = '1.0.4';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1151,7 +1151,8 @@ mariniere: { name: 'Mosselen marinière', subtitle: 'De klassieke mosselen met f
       }
     };
 
-    const supportedLangs = ['fr', 'es', 'en', 'nl'];
+const supportedLangs = ['fr', 'es', 'en', 'nl'];
+const LANGUAGE_STORAGE_KEY = 'tapcarta-selected-language';
 
 function detectLanguage() {
   const urlLang = new URLSearchParams(window.location.search).get('lang');
@@ -1182,7 +1183,6 @@ let cartPanelOpen = false;
 
 const VERSION_STORAGE_KEY = 'tapcarta-last-loaded-version';
 const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
-const LANGUAGE_STORAGE_KEY = 'tapcarta-selected-language';
 
     function isIos() {
       return /iphone|ipad|ipod/i.test(window.navigator.userAgent);

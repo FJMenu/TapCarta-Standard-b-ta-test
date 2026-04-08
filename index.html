@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.5';
+    const APP_VERSION = '1.0.6';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1942,10 +1942,9 @@ document.documentElement.lang = currentLang;
               <div>
                 <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormNote}</label>
                 <textarea
-                  oninput="updateOrderFormField('note', this.value)"
-                  placeholder="${t.orderFormNotePlaceholder}"
-                  class="w-full min-h-[96px] rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50 resize-none"
-                >${orderForm.note}</textarea>
+  oninput="updateOrderFormField('note', this.value)"
+  placeholder="${t.orderFormNotePlaceholder}"
+  class="w-full min-h-[96px] rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50 resize-none">${orderForm.note}</textarea>
               </div>
             </div>
           </div>

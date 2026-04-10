@@ -1990,139 +1990,7 @@ document.documentElement.lang = currentLang;
   ${t.closeButton}
 </button>
       </div>
-
-      ${cartPanelOpen ? `
-        <div class="mt-4 pt-4 border-t border-gold/20">
-      <div class="flex items-center justify-between gap-3 mb-2">
-  <div class="text-sm font-semibold text-gold tracking-wide uppercase">${t.cartTitle}</div>
-  <div class="text-xs text-cream/70">
-  ${t.cartTotal} : ${cart.reduce((sum, cartItem) => {
-    const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
-    if (!sourceItem || !sourceItem.price) return sum;
-    const numericPrice = parseFloat(sourceItem.price.replace('€', '').replace(',', '.').trim());
-    if (Number.isNaN(numericPrice)) return sum;
-    return sum + (numericPrice * cartItem.quantity);
-  }, 0).toFixed(2).replace('.', ',')} €
-</div>
-</div>
-         <div class="space-y-2">
-  ${cart.length ? cart.map(cartItem => {
-    const itemData = t.items[cartItem.id];
-    if (!itemData) return '';
-
-  return `
-  <div class="flex items-center justify-between gap-3 rounded-lg border border-gold/15 bg-black/10 px-3 py-2">
-    <div class="text-sm text-cream/85">${itemData.name}</div>
-    <div class="flex items-center gap-2">
-      <div class="text-xs font-semibold text-gold">x${cartItem.quantity}</div>
-    <button onclick="removeFromCart('${cartItem.id}')" class="btn-action px-2 py-1 rounded-md border border-gold/30 text-[11px] font-semibold text-cream/80 hover:bg-gold/10 transition-all">
-  ${t.removeButton}
-</button>
-    </div>
-  </div>
-`;
-}).join('') : `<div class="text-sm text-cream/75">${t.cartEmpty}</div>`}
-</div>
-
-        ${cartPanelOpen && cart.length ? `
-          <div class="mt-4 pt-4 border-t border-gold/20">
-            <div class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.orderFormTitle}</div>
-
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormName}</label>
-                <input
-                  type="text"
-                  value="${orderForm.name}"
-                  oninput="updateOrderFormField('name', this.value)"
-                  class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50"
-                >
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormPhone}</label>
-                <input
-                  type="tel"
-                  value="${orderForm.phone}"
-                  oninput="updateOrderFormField('phone', this.value)"
-                  class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50"
-                >
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-               <div>
-  <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormDate}</label>
-  <div class="relative">
-    <input
-      type="date"
-      value="${orderForm.date}"
-      oninput="updateOrderFormField('date', this.value)"
-      class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50"
-    >
-    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-      <i data-lucide="calendar-days" class="w-4 h-4 text-gold"></i>
-    </div>
-  </div>
-</div>
-
-         <div>
-  <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormTime}</label>
-  <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-    <div class="relative">
-      <select
-        onchange="updateOrderFormTimePart('hours', this.value)"
-        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
-      >
-        ${getHourOptions().map(hour => {
-          const selected = getOrderFormTimeParts().hours === hour ? 'selected' : '';
-          return `<option value="${hour}" ${selected}>${hour}</option>`;
-        }).join('')}
-      </select>
-      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-        <i data-lucide="clock-3" class="w-4 h-4 text-gold"></i>
-      </div>
-    </div>
-
-    <span class="text-gold font-semibold">:</span>
-
-    <div class="relative">
-      <select
-        onchange="updateOrderFormTimePart('minutes', this.value)"
-        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
-      >
-        ${getMinuteOptions().map(minute => {
-          const selected = getOrderFormTimeParts().minutes === minute ? 'selected' : '';
-          return `<option value="${minute}" ${selected}>${minute}</option>`;
-        }).join('')}
-      </select>
-      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-        <i data-lucide="chevron-down" class="w-4 h-4 text-gold"></i>
-      </div>
-    </div>
-  </div>
-</div>
-
-             <div>
-  <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormNote}</label>
-  <textarea
-    oninput="updateOrderFormField('note', this.value)"
-    placeholder="${t.orderFormNotePlaceholder}"
-    class="w-full min-h-[128px] rounded-lg bg-black/20 border border-gold/20 px-3 py-3 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50 resize-none"
-  >${orderForm.note}</textarea>
-</div>
-                    </div>
-
-            ${cart.length ? `
-              <div class="mt-4 flex justify-end">
-                <button onclick="openOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">
-                  ${t.reviewOrderButton}
-                </button>
-              </div>
-            ` : ''}
-     
-          </div>
-        ` : ''}
-      </div>
+      ${''}
     </div>
   </div>
       ` : ''}
@@ -2236,6 +2104,139 @@ ${!orderMode ? `
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-suggestions').scrollIntoView({behavior:'smooth', block:'start'})">${t.suggestions}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-supplements').scrollIntoView({behavior:'smooth', block:'start'})">${t.supplements}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
+    </div>
+  ` : ''}
+
+  ${orderMode && cartPanelOpen ? `
+    <div class="mt-6 w-full max-w-3xl mx-auto rounded-2xl border border-gold/40 bg-darkCard px-4 py-4 shadow-lg">
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <div class="text-sm font-semibold text-gold tracking-wide uppercase">${t.cartTitle}</div>
+        <div class="text-xs text-cream/70">
+          ${t.cartTotal} : ${cart.reduce((sum, cartItem) => {
+            const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
+            if (!sourceItem || !sourceItem.price) return sum;
+            const numericPrice = parseFloat(sourceItem.price.replace('€', '').replace(',', '.').trim());
+            if (Number.isNaN(numericPrice)) return sum;
+            return sum + (numericPrice * cartItem.quantity);
+          }, 0).toFixed(2).replace('.', ',')} €
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        ${cart.length ? cart.map(cartItem => {
+          const itemData = t.items[cartItem.id];
+          if (!itemData) return '';
+
+          return `
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-gold/15 bg-black/10 px-3 py-2">
+              <div class="text-sm text-cream/85">${itemData.name}</div>
+              <div class="flex items-center gap-2">
+                <div class="text-xs font-semibold text-gold">x${cartItem.quantity}</div>
+                <button onclick="removeFromCart('${cartItem.id}')" class="btn-action px-2 py-1 rounded-md border border-gold/30 text-[11px] font-semibold text-cream/80 hover:bg-gold/10 transition-all">
+                  ${t.removeButton}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('') : `<div class="text-sm text-cream/75">${t.cartEmpty}</div>`}
+      </div>
+
+      ${cart.length ? `
+        <div class="mt-4 pt-4 border-t border-gold/20">
+          <div class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.orderFormTitle}</div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormName}</label>
+              <input
+                type="text"
+                value="${orderForm.name}"
+                oninput="updateOrderFormField('name', this.value)"
+                class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50"
+              >
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormPhone}</label>
+              <input
+                type="tel"
+                value="${orderForm.phone}"
+                oninput="updateOrderFormField('phone', this.value)"
+                class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50"
+              >
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormDate}</label>
+                <div class="relative">
+                  <input
+                    type="date"
+                    value="${orderForm.date}"
+                    oninput="updateOrderFormField('date', this.value)"
+                    class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50"
+                  >
+                  <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <i data-lucide="calendar-days" class="w-4 h-4 text-gold"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormTime}</label>
+                <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+                  <div class="relative">
+                    <select
+                      onchange="updateOrderFormTimePart('hours', this.value)"
+                      class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
+                    >
+                      ${getHourOptions().map(hour => {
+                        const selected = getOrderFormTimeParts().hours === hour ? 'selected' : '';
+                        return `<option value="${hour}" ${selected}>${hour}</option>`;
+                      }).join('')}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <i data-lucide="clock-3" class="w-4 h-4 text-gold"></i>
+                    </div>
+                  </div>
+
+                  <span class="text-gold font-semibold">:</span>
+
+                  <div class="relative">
+                    <select
+                      onchange="updateOrderFormTimePart('minutes', this.value)"
+                      class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
+                    >
+                      ${getMinuteOptions().map(minute => {
+                        const selected = getOrderFormTimeParts().minutes === minute ? 'selected' : '';
+                        return `<option value="${minute}" ${selected}>${minute}</option>`;
+                      }).join('')}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <i data-lucide="chevron-down" class="w-4 h-4 text-gold"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormNote}</label>
+                <textarea
+                  oninput="updateOrderFormField('note', this.value)"
+                  placeholder="${t.orderFormNotePlaceholder}"
+                  class="w-full min-h-[128px] rounded-lg bg-black/20 border border-gold/20 px-3 py-3 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50 resize-none"
+                >${orderForm.note}</textarea>
+              </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+              <button onclick="openOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">
+                ${t.reviewOrderButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
     </div>
   ` : ''}
 </section>

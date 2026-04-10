@@ -2092,9 +2092,9 @@ ${!orderMode ? `
   </section>
 ` : ''}
 
-  <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
+ <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
   ${!orderMode ? `
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-snacks').scrollIntoView({behavior:'smooth', block:'start'})">${t.snacks}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-entrees').scrollIntoView({behavior:'smooth', block:'start'})">${t.entrees}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-plats').scrollIntoView({behavior:'smooth', block:'start'})">${t.plats}</button>
@@ -2106,6 +2106,10 @@ ${!orderMode ? `
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
     </div>
   ` : ''}
+
+  <div class="w-full max-w-3xl mx-auto">
+    ${menuHTML}
+  </div>
 
   ${orderMode && cartPanelOpen ? `
     <div class="mt-6 w-full max-w-3xl mx-auto rounded-2xl border border-gold/40 bg-darkCard px-4 py-4 shadow-lg">

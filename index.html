@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.10';
+    const APP_VERSION = '1.0.11';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -2131,51 +2131,53 @@ document.documentElement.lang = currentLang;
   </div>
 ` : ''}
 
-        <section class="px-6 py-6 animate-fade-up delay-1">
-  <div class="flex justify-center gap-4 flex-wrap">
-    <button onclick="activateOrderMode()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-      <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-     <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
-    </button>
-
-    <a href="tel:0034672486699" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-      <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-sm font-semibold text-cream tracking-wide">${t.call}</span>
-    </a>
-
-    <button onclick="scrollToAddress()" class="btn-action group hidden lg:flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-      <i data-lucide="map" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-sm font-semibold text-cream tracking-wide">${t.addressButton}</span>
-    </button>
-
-    <a href="https://wa.me/34672486699" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-      <i data-lucide="message-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-sm font-semibold text-cream tracking-wide">${t.whatsapp}</span>
-    </a>
-
-    <a href="https://maps.app.goo.gl/w1YhWUqoJ6qp8KDF9" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-      <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
-    </a>
-  </div>
-
-  <div class="mt-4 flex justify-center gap-3 flex-wrap">
+  <section class="px-6 py-6 animate-fade-up delay-1">
   ${orderMode ? `
-    <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-darkCard border border-gold/35 text-cream hover:border-gold/60 hover:bg-gold/10 transition-all shadow-sm">
-      <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-xs font-semibold tracking-wide">${t.cartButton} (${cart.reduce((total, item) => total + item.quantity, 0)})</span>
-    </button>
-  ` : ''}
+    <div class="fixed right-4 bottom-4 z-40">
+      <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl">
+        <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-xs font-semibold tracking-wide">${t.cartButton} (${cart.reduce((total, item) => total + item.quantity, 0)})</span>
+      </button>
+    </div>
+  ` : `
+    <div class="flex justify-center gap-4 flex-wrap">
+      <button onclick="activateOrderMode()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
+      </button>
 
-  <button id="install-app-btn" hidden onclick="handleInstallClick()" class="btn-action group flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-darkCard/90 border border-gold/25 text-cream/85 hover:border-gold/45 hover:bg-darkCard transition-all shadow-sm">
-    <i data-lucide="download" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-    <span class="text-xs font-medium tracking-wide">${t.installApp}</span>
-  </button>
-</div>
+      <a href="tel:0034672486699" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+        <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.call}</span>
+      </a>
 
-<div id="ios-install-help" hidden class="mt-3 p-4 rounded-lg bg-darkCard border border-gold/20 text-sm text-cream/80">
-  ${t.iosInstallHelp}
-</div>
+      <button onclick="scrollToAddress()" class="btn-action group hidden lg:flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+        <i data-lucide="map" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.addressButton}</span>
+      </button>
+
+      <a href="https://wa.me/34672486699" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+        <i data-lucide="message-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.whatsapp}</span>
+      </a>
+
+      <a href="https://maps.app.goo.gl/w1YhWUqoJ6qp8KDF9" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+        <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
+      </a>
+    </div>
+
+    <div class="mt-4 flex justify-center gap-3 flex-wrap">
+      <button id="install-app-btn" hidden onclick="handleInstallClick()" class="btn-action group flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-darkCard/90 border border-gold/25 text-cream/85 hover:border-gold/45 hover:bg-darkCard transition-all shadow-sm">
+        <i data-lucide="download" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-xs font-medium tracking-wide">${t.installApp}</span>
+      </button>
+    </div>
+
+    <div id="ios-install-help" hidden class="mt-3 p-4 rounded-lg bg-darkCard border border-gold/20 text-sm text-cream/80">
+      ${t.iosInstallHelp}
+    </div>
+  `}
 </section>
 
    ${!orderMode ? renderReviewCTA(t) : ''}
@@ -2199,123 +2201,120 @@ ${!orderMode ? `
   </section>
 ` : ''}
 
-        <section class="px-6 py-4 animate-fade-up delay-2 flex justify-center">
-          <button class="group flex items-center justify-center gap-3 px-5 py-2.5 rounded-lg border-2 border-gold/40 text-sm font-medium text-gold hover:border-gold hover:bg-gold/5 transition-all" onclick="document.getElementById('menu-allergenes').scrollIntoView({behavior:'smooth', block:'start'})">
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-            <span class="tracking-wide">${t.allergenes}</span>
-          </button>
-        </section>
+    ${!orderMode ? `
+  <section class="px-6 py-4 animate-fade-up delay-2 flex justify-center">
+    <button class="group flex items-center justify-center gap-3 px-5 py-2.5 rounded-lg border-2 border-gold/40 text-sm font-medium text-gold hover:border-gold hover:bg-gold/5 transition-all" onclick="document.getElementById('menu-allergenes').scrollIntoView({behavior:'smooth', block:'start'})">
+      <i data-lucide="alert-triangle" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="tracking-wide">${t.allergenes}</span>
+    </button>
+  </section>
+` : ''}
 
-        <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-snacks').scrollIntoView({behavior:'smooth', block:'start'})">${t.snacks}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-entrees').scrollIntoView({behavior:'smooth', block:'start'})">${t.entrees}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-plats').scrollIntoView({behavior:'smooth', block:'start'})">${t.plats}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-moules').scrollIntoView({behavior:'smooth', block:'start'})">${t.moules}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-desserts').scrollIntoView({behavior:'smooth', block:'start'})">${t.desserts}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-crepes').scrollIntoView({behavior:'smooth', block:'start'})">${t.crepes}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-suggestions').scrollIntoView({behavior:'smooth', block:'start'})">${t.suggestions}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-supplements').scrollIntoView({behavior:'smooth', block:'start'})">${t.supplements}</button>
-            <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
-          </div>
-        </section>
-
-        <div class="diamond-divider">
-          <span></span><span></span><span></span>
-        </div>
-
-        <section class="px-6 pb-6 animate-fade-up delay-4">
-          <h2 class="font-display text-2xl font-bold text-gold text-center mb-6">${t.ourMenu}</h2>
-          ${menuHTML}
-        </section>
-
-        <div class="diamond-divider">
-          <span></span><span></span><span></span>
-        </div>
-
-        <section class="px-6 pb-6 animate-fade-up delay-5">
-          ${renderAllergenSection(t)}
-        </section>
-
-        <div class="diamond-divider">
-          <span></span><span></span><span></span>
-        </div>
-
-        <footer class="px-6 pt-4 pb-10 text-center animate-fade-up delay-5">
-          <div class="space-y-6">
-            <div id="address-section">
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <i data-lucide="map-pin" class="w-4 h-4 text-gold"></i>
-                <h4 class="font-display text-sm font-bold text-gold uppercase tracking-wider">${t.address}</h4>
-              </div>
-              <p class="text-sm text-cream/60 leading-relaxed">Rue de la Croix Jurlet 291<br>4040 Herstal</p>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-center gap-2 mb-3">
-                <i data-lucide="clock" class="w-4 h-4 text-gold"></i>
-                <h4 class="font-display text-sm font-bold text-gold uppercase tracking-wider">${t.hours}</h4>
-              </div>
-              <div class="inline-block text-left">
-                <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-                  <span class="text-cream/50">${t.tueFri}</span>
-                  <span class="text-cream/80 font-medium">${t.tueFriHours}</span>
-                  <span class="text-cream/50">${t.satSun}</span>
-                  <span class="text-cream/80 font-medium">${t.satSunHours}</span>
-                  <span class="text-cream/50">${t.monday}</span>
-                  <span class="text-cream/40 italic">${t.closed}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex justify-center gap-1 pt-4">
-              <div class="w-8 h-0.5 rounded-full bg-dark border border-gray-700"></div>
-              <div class="w-8 h-0.5 rounded-full bg-gold"></div>
-              <div class="w-8 h-0.5 rounded-full" style="background:#EF3340;"></div>
-            </div>
-
-   <div class="pt-5 flex justify-center">
-  <a
-    href="https://tapcarta.com?lang=${currentLang}"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="brand-card flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border-2 border-gold/40 shadow-lg hover:bg-white/10 hover:border-gold/60 transition-all duration-300 cursor-pointer"
-title="${t.discoverTapCarta}"
-aria-label="${t.discoverTapCarta}"
-  >
-    <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold/30 bg-white">
-      <img
-        src="${siteConfig.brandLogoUrl}"
-        alt="FJ"
-        class="w-full h-full object-contain"
-        loading="lazy"
-        decoding="async"
-      >
+      ${!orderMode ? `
+  <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-snacks').scrollIntoView({behavior:'smooth', block:'start'})">${t.snacks}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-entrees').scrollIntoView({behavior:'smooth', block:'start'})">${t.entrees}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-plats').scrollIntoView({behavior:'smooth', block:'start'})">${t.plats}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-moules').scrollIntoView({behavior:'smooth', block:'start'})">${t.moules}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-desserts').scrollIntoView({behavior:'smooth', block:'start'})">${t.desserts}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-crepes').scrollIntoView({behavior:'smooth', block:'start'})">${t.crepes}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-suggestions').scrollIntoView({behavior:'smooth', block:'start'})">${t.suggestions}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-supplements').scrollIntoView({behavior:'smooth', block:'start'})">${t.supplements}</button>
+      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
     </div>
+  </section>
+` : ''}
 
-    <div class="leading-tight text-left min-w-0">
-      <div class="text-base font-semibold text-cream tracking-wide break-words">
-        ${siteConfig.productName}
+     ${!orderMode ? `
+  <div class="diamond-divider">
+    <span></span><span></span><span></span>
+  </div>
+
+  <section class="px-6 pb-6 animate-fade-up delay-5">
+    ${renderAllergenSection(t)}
+  </section>
+
+  <div class="diamond-divider">
+    <span></span><span></span><span></span>
+  </div>
+
+  <footer class="px-6 pt-4 pb-10 text-center animate-fade-up delay-5">
+    <div class="space-y-6">
+      <div id="address-section">
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <i data-lucide="map-pin" class="w-4 h-4 text-gold"></i>
+          <h4 class="font-display text-sm font-bold text-gold uppercase tracking-wider">${t.address}</h4>
+        </div>
+        <p class="text-sm text-cream/60 leading-relaxed">Rue de la Croix Jurlet 291<br>4040 Herstal</p>
       </div>
 
-      <div class="text-sm text-gold/80 mt-1 break-words">
-        ${siteConfig.productSignature}
-      </div>
-
-      <div class="text-xs text-cream/60 mt-2">
-        ${t.discoverTapCarta}
-      </div>
-
-      <div class="text-xs text-cream/40 mt-2">
-        ${t.versionLabel} ${APP_VERSION}
-      </div>
-    </div>
-  </a>
-</div>
-
-            <p class="text-xs text-cream/30 mt-4">${t.copyright}</p>
+      <div>
+        <div class="flex items-center justify-center gap-2 mb-3">
+          <i data-lucide="clock" class="w-4 h-4 text-gold"></i>
+          <h4 class="font-display text-sm font-bold text-gold uppercase tracking-wider">${t.hours}</h4>
+        </div>
+        <div class="inline-block text-left">
+          <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+            <span class="text-cream/50">${t.tueFri}</span>
+            <span class="text-cream/80 font-medium">${t.tueFriHours}</span>
+            <span class="text-cream/50">${t.satSun}</span>
+            <span class="text-cream/80 font-medium">${t.satSunHours}</span>
+            <span class="text-cream/50">${t.monday}</span>
+            <span class="text-cream/40 italic">${t.closed}</span>
           </div>
-                </footer>
+        </div>
+      </div>
+
+      <div class="flex justify-center gap-1 pt-4">
+        <div class="w-8 h-0.5 rounded-full bg-dark border border-gray-700"></div>
+        <div class="w-8 h-0.5 rounded-full bg-gold"></div>
+        <div class="w-8 h-0.5 rounded-full" style="background:#EF3340;"></div>
+      </div>
+
+      <div class="pt-5 flex justify-center">
+        <a
+          href="https://tapcarta.com?lang=${currentLang}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="brand-card flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border-2 border-gold/40 shadow-lg hover:bg-white/10 hover:border-gold/60 transition-all duration-300 cursor-pointer"
+          title="${t.discoverTapCarta}"
+          aria-label="${t.discoverTapCarta}"
+        >
+          <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold/30 bg-white">
+            <img
+              src="${siteConfig.brandLogoUrl}"
+              alt="FJ"
+              class="w-full h-full object-contain"
+              loading="lazy"
+              decoding="async"
+            >
+          </div>
+
+          <div class="leading-tight text-left min-w-0">
+            <div class="text-base font-semibold text-cream tracking-wide break-words">
+              ${siteConfig.productName}
+            </div>
+
+            <div class="text-sm text-gold/80 mt-1 break-words">
+              ${siteConfig.productSignature}
+            </div>
+
+            <div class="text-xs text-cream/60 mt-2">
+              ${t.discoverTapCarta}
+            </div>
+
+            <div class="text-xs text-cream/40 mt-2">
+              ${t.versionLabel} ${APP_VERSION}
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <p class="text-xs text-cream/30 mt-4">${t.copyright}</p>
+    </div>
+  </footer>
+` : ''}
       `;
 
       const toastTitle = document.getElementById('install-toast-title');   

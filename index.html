@@ -1457,12 +1457,16 @@ function activateOrderMode() {
   renderMenu();
 
   requestAnimationFrame(() => {
-    const target = document.getElementById('menu-start');
-    if (target) {
-      target.scrollIntoView({ behavior: 'auto', block: 'start' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    }
+  const target =
+  document.getElementById('menu-snacks') ||
+  document.getElementById('menu-entrees') ||
+  document.getElementById('menu-plats');
+
+if (target) {
+  target.scrollIntoView({ behavior: 'auto', block: 'start' });
+} else {
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
   });
 }
 
@@ -2139,15 +2143,8 @@ document.documentElement.lang = currentLang;
   </div>
 ` : ''}
 
+ ${!orderMode ? `
   <section class="px-6 py-6 animate-fade-up delay-1">
-  ${orderMode ? `
-    <div class="fixed right-4 bottom-4 z-40">
-      <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl">
-        <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-xs font-semibold tracking-wide">${t.cartButton} (${cart.reduce((total, item) => total + item.quantity, 0)})</span>
-      </button>
-    </div>
-  ` : `
     <div class="flex justify-center gap-4 flex-wrap">
       <button onclick="activateOrderMode()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
@@ -2185,8 +2182,17 @@ document.documentElement.lang = currentLang;
     <div id="ios-install-help" hidden class="mt-3 p-4 rounded-lg bg-darkCard border border-gold/20 text-sm text-cream/80">
       ${t.iosInstallHelp}
     </div>
-  `}
-</section>
+  </section>
+` : ''}
+
+${orderMode ? `
+  <div class="fixed right-4 bottom-4 z-40">
+    <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl">
+      <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-xs font-semibold tracking-wide">${t.cartButton} (${cart.reduce((total, item) => total + item.quantity, 0)})</span>
+    </button>
+  </div>
+` : ''}
 
    ${!orderMode ? renderReviewCTA(t) : ''}
 

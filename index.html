@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.9';
+    const APP_VERSION = '1.0.10';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1489,6 +1489,12 @@ function toggleCartPanel() {
 }
 
 function openOrderReview() {
+  if (!cart.length) {
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
   orderReviewOpen = true;
   renderMenu();
 }
@@ -1500,6 +1506,24 @@ function closeOrderReview() {
 
 function validateOrderReview() {
   const t = translations[currentLang];
+
+  const name = (orderForm.name || '').trim();
+  const phone = (orderForm.phone || '').trim();
+  const date = (orderForm.date || '').trim();
+  const time = (orderForm.time || '').trim();
+
+  if (!cart.length) {
+    alert(t.cartEmpty);
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
+  if (!name || !phone || !date || !time) {
+    alert(`${t.orderFormTitle}\n\n- ${t.orderFormName}\n- ${t.orderFormPhone}\n- ${t.orderFormDate}\n- ${t.orderFormTime}`);
+    return;
+  }
+
   alert(`${t.reviewTitle}\n\n${t.reviewPendingMessage}`);
 }
 
@@ -1526,35 +1550,6 @@ function updateOrderFormField(field, value) {
     ...orderForm,
     [field]: value
   };
-}
-
-function getHourOptions() {
-  return Array.from({ length: 24 }, (_, index) =>
-    String(index).padStart(2, '0')
-  );
-}
-
-function getMinuteOptions() {
-  return ['00', '10', '20', '30', '40', '50'];
-}
-
-function getOrderFormTimeParts() {
-  const [hours = '00', minutes = '00'] = (orderForm.time || '00:00').split(':');
-  return { hours, minutes };
-}
-
-function updateOrderFormTimePart(part, value) {
-  const currentParts = getOrderFormTimeParts();
-
-  const nextHours = part === 'hours' ? value : currentParts.hours;
-  const nextMinutes = part === 'minutes' ? value : currentParts.minutes;
-
-  orderForm = {
-    ...orderForm,
-    time: `${nextHours}:${nextMinutes}`
-  };
-
-  renderMenu();
 }
 
 function scrollToAddress() {
@@ -2112,134 +2107,7 @@ document.documentElement.lang = currentLang;
                 </button>
               </div>
             ` : ''}
-            ${orderReviewOpen && cart.length ? `
-              <div class="mt-4 pt-4 border-t border-gold/20">
-                <div class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.reviewTitle}</div>
-
-                <div class="space-y-4">
-                  <div class="rounded-lg border border-gold/15 bg-black/10 p-3">
-                    <div class="text-xs font-semibold text-gold uppercase tracking-wide mb-2">${t.reviewItems}</div>
-                    <div class="space-y-2">
-                      ${cart.map(cartItem => {
-                        const itemData = t.items[cartItem.id];
-                        if (!itemData) return '';
-
-                        const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
-                        const linePrice = sourceItem && sourceItem.price
-                          ? `${sourceItem.price} × ${cartItem.quantity}`
-                          : `x${cartItem.quantity}`;
-
-                        return `
-                          <div class="flex items-center justify-between gap-3 text-sm">
-                            <div class="text-cream/85">${itemData.name}</div>
-                            <div class="text-gold text-xs font-semibold whitespace-nowrap">${linePrice}</div>
-                          </div>
-                        `;
-                      }).join('')}
-                    </div>
-                  </div>
-
-                  <div class="rounded-lg border border-gold/15 bg-black/10 p-3">
-                    <div class="text-xs font-semibold text-gold uppercase tracking-wide mb-2">${t.reviewCustomer}</div>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormName}</span>
-                        <span class="text-cream/85 text-right">${orderForm.name || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormPhone}</span>
-                        <span class="text-cream/85 text-right">${orderForm.phone || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormDate}</span>
-                        <span class="text-cream/85 text-right">${orderForm.date || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormTime}</span>
-                        <span class="text-cream/85 text-right">${orderForm.time || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormNote}</span>
-                        <span class="text-cream/85 text-right">${orderForm.note || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                    <button onclick="closeOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/30 text-sm font-semibold text-cream/85 hover:bg-gold/10 transition-all">
-                      ${t.reviewBackButton}
-                    </button>
-  <button onclick="validateOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">
-  ${t.reviewValidateButton}
-</button>
-                  </div>
-                </div>
-              </div>
-            ` : ''}
-              ${orderReviewOpen && cart.length ? `
-              <div class="mt-4 pt-4 border-t border-gold/20">
-                <div class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.reviewTitle}</div>
-
-                <div class="space-y-4">
-                  <div class="rounded-lg border border-gold/15 bg-black/10 p-3">
-                    <div class="text-xs font-semibold text-gold uppercase tracking-wide mb-2">${t.reviewItems}</div>
-                    <div class="space-y-2">
-                      ${cart.map(cartItem => {
-                        const itemData = t.items[cartItem.id];
-                        if (!itemData) return '';
-
-                        const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
-                        const linePrice = sourceItem && sourceItem.price
-                          ? `${sourceItem.price} × ${cartItem.quantity}`
-                          : `x${cartItem.quantity}`;
-
-                        return `
-                          <div class="flex items-center justify-between gap-3 text-sm">
-                            <div class="text-cream/85">${itemData.name}</div>
-                            <div class="text-gold text-xs font-semibold whitespace-nowrap">${linePrice}</div>
-                          </div>
-                        `;
-                      }).join('')}
-                    </div>
-                  </div>
-
-                  <div class="rounded-lg border border-gold/15 bg-black/10 p-3">
-                    <div class="text-xs font-semibold text-gold uppercase tracking-wide mb-2">${t.reviewCustomer}</div>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormName}</span>
-                        <span class="text-cream/85 text-right">${orderForm.name || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormPhone}</span>
-                        <span class="text-cream/85 text-right">${orderForm.phone || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormDate}</span>
-                        <span class="text-cream/85 text-right">${orderForm.date || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormTime}</span>
-                        <span class="text-cream/85 text-right">${orderForm.time || '-'}</span>
-                      </div>
-                      <div class="flex justify-between gap-3">
-                        <span class="text-cream/60">${t.orderFormNote}</span>
-                        <span class="text-cream/85 text-right">${orderForm.note || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                    <button onclick="closeOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/30 text-sm font-semibold text-cream/85 hover:bg-gold/10 transition-all">
-                      ${t.reviewBackButton}
-                    </button>
-                    <button class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">
-                      ${t.reviewValidateButton}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ` : ''}
+     
           </div>
         ` : ''}
       </div>

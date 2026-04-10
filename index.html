@@ -2056,7 +2056,7 @@ document.documentElement.lang = currentLang;
   </section>
 ` : ''}
 
-${orderMode ? `
+${orderMode && !cartPanelOpen ? `
   <div class="fixed right-4 bottom-4 z-40">
     <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl">
       <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>

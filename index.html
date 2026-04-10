@@ -1455,7 +1455,15 @@ function activateOrderMode() {
   }
 
   renderMenu();
-  window.scrollTo({ top: 0, behavior: 'auto' });
+
+  requestAnimationFrame(() => {
+    const target = document.getElementById('menu-start');
+    if (target) {
+      target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  });
 }
 
 function deactivateOrderMode() {
@@ -2210,8 +2218,8 @@ ${!orderMode ? `
   </section>
 ` : ''}
 
-      ${!orderMode ? `
   <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
+  ${!orderMode ? `
     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-snacks').scrollIntoView({behavior:'smooth', block:'start'})">${t.snacks}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-entrees').scrollIntoView({behavior:'smooth', block:'start'})">${t.entrees}</button>
@@ -2223,8 +2231,8 @@ ${!orderMode ? `
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-supplements').scrollIntoView({behavior:'smooth', block:'start'})">${t.supplements}</button>
       <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
     </div>
-  </section>
-` : ''}
+  ` : ''}
+</section>
 
      ${!orderMode ? `
   <div class="diamond-divider">

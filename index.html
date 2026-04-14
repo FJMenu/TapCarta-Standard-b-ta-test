@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.13';
+    const APP_VERSION = '1.0.14';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -649,74 +649,129 @@
   </div>
 
   <script>
-    const siteConfig = {
-      logoUrl: "https://i.postimg.cc/bN0b11bS/logo-sans-fond.png",
-      brandLogoUrl: "https://i.postimg.cc/sX7n1G14/Chat-GPT-Image-14-fevr-2026-15-23-38.png",
-      productName: "TapCarta",
-      productSignature: "Created by FJ",
-      reviewUrl: "https://search.google.com/local/writereview?placeid=ChIJ3b0pGDb7wEcRs2VnXGk2mmE",
-      desktopCollageUrl: "liege-collage.jpg"
-    };
+  const RESTAURANT_JSON_URL = './restaurants/tapcarta-demo.json';
 
-    const menuData = {
-      snacks: [
-        { id: 'ailes_poulet', price: '4,50 €' },
-        { id: 'nuggets', price: '4,00 €' },
-        { id: 'bitterballs', price: '4,00 €' },
-        { id: 'fricadelle', price: '3,50 €' },
-        { id: 'fricadelle_speciale', price: '4,10 €' },
-        { id: 'cervelas', price: '4,50 €' },
-        { id: 'frites', price: '5,50 €' },
-        { id: 'patatas_bravas', price: '7,00 €' }
-      ],
-      entrees: [
-        { id: 'croquettes_fromage', price: '12,50 €' },
-        { id: 'camembert_frit', price: '12,50 €' },
-        { id: 'croquettes_crevettes', price: '18,50 €' },
-        { id: 'escargots_bourgogne', price: '9,50 €' },
-        { id: 'moule_escargot', price: '10,70 €' },
-        { id: 'gambas_pil_pil', price: '14,50 €' },
-        { id: 'salade_mixte', price: '8,50 €' }
-      ],
-      plats: [
-        { id: 'vol_auvent', price: '16,50 €' },
-        { id: 'carbonnade', price: '17,50 €' },
-        { id: 'boulets_tomate', price: '16,50 €' },
-        { id: 'boulets_liegeois', price: '16,50 €' },
-        { id: 'americain_frites', price: '19,50 €' },
-        { id: 'spaghetti_bolos', price: '19,50 €' },
-        { id: 'tomate_crevettes', specialPriceText: 'priceDay' }
-      ],
-      moules: [
-        { id: 'mariniere', price: '21,00 €' },
+let siteConfig = {
+  logoUrl: "https://i.postimg.cc/bN0b11bS/logo-sans-fond.png",
+  brandLogoUrl: "https://i.postimg.cc/sX7n1G14/Chat-GPT-Image-14-fevr-2026-15-23-38.png",
+  productName: "TapCarta",
+  productSignature: "Created by FJ",
+  reviewUrl: "https://search.google.com/local/writereview?placeid=ChIJ3b0pGDb7wEcRs2VnXGk2mmE",
+  desktopCollageUrl: "liege-collage.jpg",
+  restaurantName: "TapCarta Demo"
+};
 
-        { id: 'vin_blanc', price: '23,00 €' },
-        { id: 'flambee_ricard', price: '23,00 €' }
-      ],
-      desserts: [
-        { id: 'banana_split', price: '8,50 €' },
-        { id: 'dame_blanche', price: '8,00 €' },
-        { id: 'coupe_brasilienne', price: '8,00 €' },
-        { id: 'coupe_avocat', price: '9,00 €' },
-        { id: 'fraise_melba', price: '9,50 €' },
-        { id: 'colonel', price: '9,00 €' }
-      ],
-      crepes: [
-        { id: 'crepe_sucre', price: '5,50 €' },
-        { id: 'crepe_mikado', price: '7,50 €' },
-        { id: 'crepe_grand_marnier', price: '10,50 €' }
-      ],
-      suggestions: [
-        { id: 'plat_du_jour', price: '11,50 €' },
-        { id: 'menu_3_services', price: '16,50 €' },
-        { id: 'demandez_suggestions', noPrice: true }
-      ],
-      supplements: [
-        { id: 'pain', price: '1,50 €' },
-        { id: 'sauce', price: '1,50 €' }
-      ],
-      boissons: []
-    };
+let menuData = {
+  snacks: [
+    { id: 'ailes_poulet', price: '4,50 €' },
+    { id: 'nuggets', price: '4,00 €' },
+    { id: 'bitterballs', price: '4,00 €' },
+    { id: 'fricadelle', price: '3,50 €' },
+    { id: 'fricadelle_speciale', price: '4,10 €' },
+    { id: 'cervelas', price: '4,50 €' },
+    { id: 'frites', price: '5,50 €' },
+    { id: 'patatas_bravas', price: '7,00 €' }
+  ],
+  entrees: [
+    { id: 'croquettes_fromage', price: '12,50 €' },
+    { id: 'camembert_frit', price: '12,50 €' },
+    { id: 'croquettes_crevettes', price: '18,50 €' },
+    { id: 'escargots_bourgogne', price: '9,50 €' },
+    { id: 'moule_escargot', price: '10,70 €' },
+    { id: 'gambas_pil_pil', price: '14,50 €' },
+    { id: 'salade_mixte', price: '8,50 €' }
+  ],
+  plats: [
+    { id: 'vol_auvent', price: '16,50 €' },
+    { id: 'carbonnade', price: '17,50 €' },
+    { id: 'boulets_tomate', price: '16,50 €' },
+    { id: 'boulets_liegeois', price: '16,50 €' },
+    { id: 'americain_frites', price: '19,50 €' },
+    { id: 'spaghetti_bolos', price: '19,50 €' },
+    { id: 'tomate_crevettes', specialPriceText: 'priceDay' }
+  ],
+  moules: [
+    { id: 'mariniere', price: '21,00 €' },
+    { id: 'vin_blanc', price: '23,00 €' },
+    { id: 'flambee_ricard', price: '23,00 €' }
+  ],
+  desserts: [
+    { id: 'banana_split', price: '8,50 €' },
+    { id: 'dame_blanche', price: '8,00 €' },
+    { id: 'coupe_brasilienne', price: '8,00 €' },
+    { id: 'coupe_avocat', price: '9,00 €' },
+    { id: 'fraise_melba', price: '9,50 €' },
+    { id: 'colonel', price: '9,00 €' }
+  ],
+  crepes: [
+    { id: 'crepe_sucre', price: '5,50 €' },
+    { id: 'crepe_mikado', price: '7,50 €' },
+    { id: 'crepe_grand_marnier', price: '10,50 €' }
+  ],
+  suggestions: [
+    { id: 'plat_du_jour', price: '11,50 €' },
+    { id: 'menu_3_services', price: '16,50 €' },
+    { id: 'demandez_suggestions', noPrice: true }
+  ],
+  supplements: [
+    { id: 'pain', price: '1,50 €' },
+    { id: 'sauce', price: '1,50 €' }
+  ],
+  boissons: []
+};
+
+function formatAdminPrice(price) {
+  if (price === null || price === undefined || price === '') return '';
+  const numericPrice = Number(price);
+  if (Number.isNaN(numericPrice)) return String(price);
+  return `${numericPrice.toFixed(2).replace('.', ',')} €`;
+}
+
+function mapAdminItems(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .filter(item => item && item.visible !== false)
+    .sort((a, b) => (a.order || 9999) - (b.order || 9999))
+    .map(item => ({
+      id: item.id || `item-${Date.now()}`,
+      price: formatAdminPrice(item.price),
+      adminName: item.name || '',
+      adminSubtitle: item.subtitle || ''
+    }));
+}
+
+async function loadRestaurantData() {
+  const response = await fetch(RESTAURANT_JSON_URL, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Impossible de charger ${RESTAURANT_JSON_URL}`);
+  }
+
+  const restaurantData = await response.json();
+
+  if (restaurantData?.identity?.name) {
+    siteConfig.restaurantName = restaurantData.identity.name;
+  }
+
+  if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
+    supportedLangs.length = 0;
+    restaurantData.identity.languages.forEach(lang => {
+      if (translations[lang]) supportedLangs.push(lang);
+    });
+
+    if (!supportedLangs.includes(currentLang)) {
+      currentLang = supportedLangs.includes('fr') ? 'fr' : supportedLangs[0];
+    }
+  }
+
+  const entreesCategory = restaurantData?.menu?.categories?.find(category => category.id === 'entrees');
+
+  if (entreesCategory) {
+    menuData.entrees = mapAdminItems(entreesCategory.items);
+  }
+
+  return restaurantData;
+}
 
     const translations = {
       fr: {
@@ -1951,10 +2006,11 @@ function updateOrderFormTimePart(part, value) {
       `;
     }
 
-    function renderMenu() {
-      const t = translations[currentLang];
-   const wrapper = document.getElementById('app-wrapper');
-document.documentElement.lang = currentLang;
+function renderMenu() {
+  const t = translations[currentLang];
+  const wrapper = document.getElementById('app-wrapper');
+  document.documentElement.lang = currentLang;
+  document.title = siteConfig.restaurantName || siteConfig.productName;
 
       const menuHTML = `
         ${renderCategory('snacks', t.snacks, t)}
@@ -2463,6 +2519,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await registerFreshServiceWorker();
 
+  try {
+    await loadRestaurantData();
+  } catch (error) {
+    console.error('Restaurant data loading error:', error);
+  }
+
   renderMenu();
 
   document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -2470,10 +2532,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lang = e.currentTarget.dataset.lang;
       if (!supportedLangs.includes(lang)) return;
 
-currentLang = lang;
-localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-renderMenu();
-window.scrollTo({ top: 0, behavior: 'auto' });
+      currentLang = lang;
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+      renderMenu();
+      window.scrollTo({ top: 0, behavior: 'auto' });
     });
   });
 });

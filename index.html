@@ -1257,10 +1257,11 @@ function getBookingTexts(lang) {
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Remarque',
       bookingNotePlaceholder: 'Remarque éventuelle',
-      bookingSubmit: 'Envoyer la réservation',
-      bookingPendingAlert: 'Envoi réservation à raccorder',
-      bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
-      bookingInvalidPhoneAlert: 'Merci d’indiquer un numéro de téléphone valable.'
+bookingSubmit: 'Envoyer la réservation',
+bookingPendingAlert: 'Envoi réservation à raccorder',
+bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
+bookingInvalidPhoneAlert: 'Merci d’indiquer un numéro de téléphone valable.',
+bookingBackToHome: 'Retour à l’accueil'
     },
     es: {
       bookingButton: 'Reservar',
@@ -1276,10 +1277,11 @@ function getBookingTexts(lang) {
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Observación',
       bookingNotePlaceholder: 'Observación opcional',
-      bookingSubmit: 'Enviar la reserva',
-      bookingPendingAlert: 'Envío de reserva por conectar',
-      bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
-      bookingInvalidPhoneAlert: 'Por favor, indique un número de teléfono válido.'
+bookingSubmit: 'Enviar la reserva',
+bookingPendingAlert: 'Envío de reserva por conectar',
+bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
+bookingInvalidPhoneAlert: 'Por favor, indique un número de teléfono válido.',
+bookingBackToHome: 'Volver al inicio'
     },
     en: {
       bookingButton: 'Book',
@@ -1295,10 +1297,11 @@ function getBookingTexts(lang) {
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Note',
       bookingNotePlaceholder: 'Optional note',
-      bookingSubmit: 'Send reservation',
-      bookingPendingAlert: 'Reservation sending to be connected',
-      bookingRequiredAlert: 'Please complete all required fields.',
-      bookingInvalidPhoneAlert: 'Please enter a valid phone number.'
+  bookingSubmit: 'Send reservation',
+bookingPendingAlert: 'Reservation sending to be connected',
+bookingRequiredAlert: 'Please complete all required fields.',
+bookingInvalidPhoneAlert: 'Please enter a valid phone number.',
+bookingBackToHome: 'Back to home'
     },
     nl: {
       bookingButton: 'Reserveren',
@@ -1314,10 +1317,10 @@ function getBookingTexts(lang) {
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Opmerking',
       bookingNotePlaceholder: 'Eventuele opmerking',
-      bookingSubmit: 'Reservatie versturen',
-      bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
-      bookingRequiredAlert: 'Vul alle verplichte velden in.',
-      bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.'
+bookingSubmit: 'Reservatie versturen',
+bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
+bookingRequiredAlert: 'Vul alle verplichte velden in.',
+bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.'
     }
   };
 
@@ -2337,8 +2340,8 @@ ${orderMode ? `
             ${t.orderModeText}
           </div>
         </div>
-  <button onclick="deactivateOrderMode()" class="btn-action px-3 py-1.5 rounded-lg border border-gold/35 text-xs font-semibold text-cream/85 hover:bg-gold/10 transition-all">
-  Retour à l’accueil
+<button onclick="deactivateOrderMode()" class="btn-action px-3 py-1.5 rounded-lg border border-gold/35 text-xs font-semibold text-cream/85 hover:bg-gold/10 transition-all">
+  ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
       ${''}
@@ -2356,8 +2359,8 @@ ${bookingMode ? `
             ${getBookingTexts(currentLang).bookingIntro}
           </div>
         </div>
-   <button onclick="deactivateBookingMode()" class="btn-action px-3 py-1.5 rounded-lg border border-gold/35 text-xs font-semibold text-cream/85 hover:bg-gold/10 transition-all">
-  Retour à l’accueil
+<button onclick="deactivateBookingMode()" class="btn-action px-3 py-1.5 rounded-lg border border-gold/35 text-xs font-semibold text-cream/85 hover:bg-gold/10 transition-all">
+  ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
 

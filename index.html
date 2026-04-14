@@ -1563,6 +1563,19 @@ const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
+function initializeBookingForm() {
+  const defaults = getDefaultOrderDateTime();
+
+  bookingForm = {
+    name: bookingForm.name || '',
+    phone: bookingForm.phone || '',
+    date: bookingForm.date || defaults.date,
+    time: bookingForm.time || defaults.time,
+    people: bookingForm.people || '2',
+    note: bookingForm.note || ''
+  };
+}
+
 function activateOrderMode() {
   if (!siteConfig.modules?.ordering) {
     orderMode = false;
@@ -1572,6 +1585,7 @@ function activateOrderMode() {
   }
 
   orderMode = true;
+  bookingMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
 
@@ -1593,6 +1607,33 @@ function activateOrderMode() {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
   });
+}
+
+function deactivateOrderMode() {
+  orderMode = false;
+  cartPanelOpen = false;
+  orderReviewOpen = false;
+  renderMenu();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function activateBookingMode() {
+  if (!siteConfig.modules?.booking) {
+    bookingMode = false;
+    return;
+  }
+
+  bookingMode = true;
+  orderMode = false;
+  cartPanelOpen = false;
+  orderReviewOpen = false;
+
+  if (!bookingForm.date && !bookingForm.time) {
+    initializeBookingForm();
+  }
+
+  renderMenu();
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function deactivateOrderMode() {

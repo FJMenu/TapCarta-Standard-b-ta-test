@@ -704,11 +704,18 @@ async function loadRestaurantData() {
 
   const restaurantData = await response.json();
 
-  if (restaurantData?.identity?.name) {
-    siteConfig.restaurantName = restaurantData.identity.name;
-  }
+if (restaurantData?.identity?.name) {
+  siteConfig.restaurantName = restaurantData.identity.name;
+}
 
-  if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
+siteConfig.modules = {
+  ordering: restaurantData?.modules?.ordering !== false,
+  booking: restaurantData?.modules?.booking !== false,
+  googleReviews: restaurantData?.modules?.googleReviews !== false,
+  whatsapp: restaurantData?.modules?.whatsapp !== false
+};
+
+if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
     supportedLangs.length = 0;
     restaurantData.identity.languages.forEach(lang => {
       if (translations[lang]) supportedLangs.push(lang);

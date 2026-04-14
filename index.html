@@ -719,13 +719,13 @@ async function loadRestaurantData() {
     }
   }
 
-  const entreesCategory = restaurantData?.menu?.categories?.find(category => category.id === 'entrees');
+const entreesCategory = restaurantData?.menu?.categories?.find(category => category.id === 'entrees');
+const platsCategory = restaurantData?.menu?.categories?.find(category => category.id === 'plats');
 
-  if (entreesCategory) {
-    menuData.entrees = mapAdminItems(entreesCategory.items);
-  }
+menuData.entrees = entreesCategory ? mapAdminItems(entreesCategory.items) : [];
+menuData.plats = platsCategory ? mapAdminItems(platsCategory.items) : [];
 
-  return restaurantData;
+return restaurantData;
 }
 
     const translations = {

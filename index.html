@@ -2095,7 +2095,7 @@ ${orderMode && !cartPanelOpen ? `
   </div>
 ` : ''}
 
-   ${!orderMode ? renderReviewCTA(t) : ''}
+${!orderMode && siteConfig.modules?.googleReviews ? renderReviewCTA(t) : ''}
 
 ${!orderMode ? `
   <section class="px-6 py-6 animate-fade-up delay-2">

@@ -2044,13 +2044,15 @@ const menuHTML = visibleCategoryKeys
   </div>
 ` : ''}
 
- ${!orderMode ? `
+  ${!orderMode ? `
   <section class="px-6 py-6 animate-fade-up delay-1">
     <div class="flex justify-center gap-4 flex-wrap">
+      ${siteConfig.modules?.ordering ? `
       <button onclick="activateOrderMode()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
       </button>
+      ` : ''}
 
       <a href="tel:0034672486699" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>

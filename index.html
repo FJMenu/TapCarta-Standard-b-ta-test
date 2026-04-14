@@ -719,11 +719,18 @@ async function loadRestaurantData() {
     }
   }
 
-const entreesCategory = restaurantData?.menu?.categories?.find(category => category.id === 'entrees');
-const platsCategory = restaurantData?.menu?.categories?.find(category => category.id === 'plats');
+Object.keys(menuData).forEach(categoryKey => {
+  menuData[categoryKey] = [];
+});
 
-menuData.entrees = entreesCategory ? mapAdminItems(entreesCategory.items) : [];
-menuData.plats = platsCategory ? mapAdminItems(platsCategory.items) : [];
+if (Array.isArray(restaurantData?.menu?.categories)) {
+  restaurantData.menu.categories.forEach(category => {
+    if (!category?.id) return;
+    if (!Object.prototype.hasOwnProperty.call(menuData, category.id)) return;
+
+    menuData[category.id] = mapAdminItems(category.items);
+  });
+}
 
 return restaurantData;
 }

@@ -1520,6 +1520,10 @@ function deactivateOrderMode() {
 }
 
 function addToCart(itemId) {
+  if (!siteConfig.modules?.ordering) {
+    return;
+  }
+
   const existingItem = cart.find(item => item.id === itemId);
 
   if (existingItem) {

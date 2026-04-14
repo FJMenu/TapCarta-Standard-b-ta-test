@@ -2017,17 +2017,13 @@ function renderMenu() {
   document.documentElement.lang = currentLang;
   document.title = siteConfig.restaurantName || siteConfig.productName;
 
-      const menuHTML = `
-        ${renderCategory('snacks', t.snacks, t)}
-        ${renderCategory('entrees', t.entrees, t)}
-        ${renderCategory('plats', t.plats, t)}
-        ${renderCategory('moules', t.moules, t)}
-        ${renderCategory('desserts', t.desserts, t)}
-        ${renderCategory('crepes', t.crepes, t)}
-        ${renderCategory('suggestions', t.suggestions, t)}
-        ${renderCategory('supplements', t.supplements, t)}
-        ${renderCategory('boissons', t.boissons, t)}
-      `;
+      const visibleCategoryKeys = Object.keys(menuData).filter(categoryKey =>
+  Array.isArray(menuData[categoryKey]) && menuData[categoryKey].length > 0
+);
+
+const menuHTML = visibleCategoryKeys
+  .map(categoryKey => renderCategory(categoryKey, t[categoryKey], t))
+  .join('');
 
       wrapper.innerHTML = `
       <header class="relative overflow-hidden pt-28 pb-16 px-4 text-center animate-fade-up">

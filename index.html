@@ -2505,16 +2505,21 @@ async function registerFreshServiceWorker() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const manifestLink = document.getElementById('manifest-link');
-  const appleTouchIconLink = document.getElementById('apple-touch-icon-link');
+const manifestLink = document.getElementById('manifest-link');
+const appleTouchIconLink = document.getElementById('apple-touch-icon-link');
+const faviconLink = document.getElementById('favicon-link');
 
-  if (manifestLink) {
-    manifestLink.href = MANIFEST_URL;
-  }
+if (manifestLink) {
+  manifestLink.href = MANIFEST_URL;
+}
 
-  if (appleTouchIconLink) {
-    appleTouchIconLink.href = ICON_192_URL;
-  }
+if (appleTouchIconLink) {
+  appleTouchIconLink.href = ICON_192_URL;
+}
+
+if (faviconLink) {
+  faviconLink.href = FAVICON_URL;
+}
 
   const reloadingForFreshVersion = ensureFreshHtmlVersion();
   if (reloadingForFreshVersion) return;

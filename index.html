@@ -1806,16 +1806,14 @@ function activateBookingMode() {
     return;
   }
 
+  resetBookingForm();
+
   bookingMode = true;
   orderMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
 
-  if (!bookingForm.date && !bookingForm.time) {
-    initializeBookingForm();
-  } else {
-    bookingForm.time = roundTimeToQuarter(bookingForm.time);
-  }
+  initializeBookingForm();
 
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });

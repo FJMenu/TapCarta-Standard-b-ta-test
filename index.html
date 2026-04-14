@@ -1241,6 +1241,81 @@ mariniere: { name: 'Mosselen marinière', subtitle: 'De klassieke mosselen met f
       }
     };
 
+function getBookingTexts(lang) {
+  const bookingTexts = {
+    fr: {
+      bookingButton: 'Réserver',
+      bookingTitle: 'Réservation',
+      bookingIntro: 'Première base visuelle du futur formulaire de réservation.',
+      bookingName: 'Nom',
+      bookingNamePlaceholder: 'Votre nom',
+      bookingPhone: 'Téléphone',
+      bookingPhonePlaceholder: 'Votre téléphone',
+      bookingDate: 'Date',
+      bookingTime: 'Heure',
+      bookingPeople: 'Nombre de personnes',
+      bookingPeoplePlaceholder: '2',
+      bookingNote: 'Remarque',
+      bookingNotePlaceholder: 'Remarque éventuelle',
+      bookingSubmit: 'Envoyer la réservation',
+      bookingPendingAlert: 'Envoi réservation à raccorder'
+    },
+    es: {
+      bookingButton: 'Reservar',
+      bookingTitle: 'Reserva',
+      bookingIntro: 'Primera base visual del futuro formulario de reserva.',
+      bookingName: 'Nombre',
+      bookingNamePlaceholder: 'Su nombre',
+      bookingPhone: 'Teléfono',
+      bookingPhonePlaceholder: 'Su teléfono',
+      bookingDate: 'Fecha',
+      bookingTime: 'Hora',
+      bookingPeople: 'Número de personas',
+      bookingPeoplePlaceholder: '2',
+      bookingNote: 'Observación',
+      bookingNotePlaceholder: 'Observación opcional',
+      bookingSubmit: 'Enviar la reserva',
+      bookingPendingAlert: 'Envío de reserva por conectar'
+    },
+    en: {
+      bookingButton: 'Book',
+      bookingTitle: 'Reservation',
+      bookingIntro: 'First visual base of the future reservation form.',
+      bookingName: 'Name',
+      bookingNamePlaceholder: 'Your name',
+      bookingPhone: 'Phone',
+      bookingPhonePlaceholder: 'Your phone number',
+      bookingDate: 'Date',
+      bookingTime: 'Time',
+      bookingPeople: 'Number of guests',
+      bookingPeoplePlaceholder: '2',
+      bookingNote: 'Note',
+      bookingNotePlaceholder: 'Optional note',
+      bookingSubmit: 'Send reservation',
+      bookingPendingAlert: 'Reservation sending to be connected'
+    },
+    nl: {
+      bookingButton: 'Reserveren',
+      bookingTitle: 'Reservatie',
+      bookingIntro: 'Eerste visuele basis van het toekomstige reservatieformulier.',
+      bookingName: 'Naam',
+      bookingNamePlaceholder: 'Uw naam',
+      bookingPhone: 'Telefoon',
+      bookingPhonePlaceholder: 'Uw telefoonnummer',
+      bookingDate: 'Datum',
+      bookingTime: 'Uur',
+      bookingPeople: 'Aantal personen',
+      bookingPeoplePlaceholder: '2',
+      bookingNote: 'Opmerking',
+      bookingNotePlaceholder: 'Eventuele opmerking',
+      bookingSubmit: 'Reservatie versturen',
+      bookingPendingAlert: 'Verzenden van reservatie nog te koppelen'
+    }
+  };
+
+  return bookingTexts[lang] || bookingTexts.fr;
+}
+
 const supportedLangs = ['fr', 'es', 'en', 'nl'];
 const LANGUAGE_STORAGE_KEY = 'tapcarta-selected-language';
 

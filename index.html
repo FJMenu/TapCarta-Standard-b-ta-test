@@ -1577,6 +1577,12 @@ function closeOrderReview() {
 function validateOrderReview() {
   const t = translations[currentLang];
 
+  if (!siteConfig.modules?.ordering) {
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
   const name = (orderForm.name || '').trim();
   const phone = (orderForm.phone || '').trim();
   const date = (orderForm.date || '').trim();

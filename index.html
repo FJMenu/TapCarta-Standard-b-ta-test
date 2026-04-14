@@ -1692,6 +1692,44 @@ function initializeBookingForm() {
   };
 }
 
+
+function roundTimeToQuarter(timeStr) {
+  if (!timeStr || !timeStr.includes(':')) return timeStr;
+
+  const [rawHours, rawMinutes] = timeStr.split(':');
+  let hours = Number(rawHours);
+  let minutes = Number(rawMinutes);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeStr;
+
+  let roundedMinutes = Math.ceil(minutes / 15) * 15;
+
+  if (roundedMinutes === 60) {
+    hours += 1;
+    roundedMinutes = 0;
+  }
+
+  if (hours >= 24) {
+    hours = 23;
+    roundedMinutes = 45;
+  }
+
+  return `${String(hours).padStart(2, '0')}:${String(roundedMinutes).padStart(2, '0')}`;
+}
+
+function initializeBookingForm() {
+  const defaults = getDefaultOrderDateTime();
+
+  bookingForm = {
+    name: bookingForm.name || '',
+    phone: bookingForm.phone || '',
+    date: bookingForm.date || defaults.date,
+    time: bookingForm.time || roundTimeToQuarter(defaults.time),
+    people: bookingForm.people || '2',
+    note: bookingForm.note || ''
+  };
+}
+
 function validateAndSubmitBooking() {
   const tBooking = getBookingTexts(currentLang);
 
@@ -1818,7 +1856,6 @@ function activateBookingMode() {
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
-
 function addToCart(itemId) {
   if (!siteConfig.modules?.ordering) {
     return;

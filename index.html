@@ -1536,6 +1536,13 @@ function addToCart(itemId) {
 }
 
 function toggleCartPanel() {
+  if (!siteConfig.modules?.ordering) {
+    cartPanelOpen = false;
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
   cartPanelOpen = !cartPanelOpen;
 
   if (!cartPanelOpen) {

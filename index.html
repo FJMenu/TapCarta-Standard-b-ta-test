@@ -1553,6 +1553,12 @@ function toggleCartPanel() {
 }
 
 function openOrderReview() {
+  if (!siteConfig.modules?.ordering) {
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
   if (!cart.length) {
     orderReviewOpen = false;
     renderMenu();

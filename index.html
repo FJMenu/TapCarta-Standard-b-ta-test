@@ -1690,6 +1690,8 @@ function initializeBookingForm() {
 }
 
 function validateAndSubmitBooking() {
+  const tBooking = getBookingTexts(currentLang);
+
   bookingForm.name = (bookingForm.name || '').trim();
   bookingForm.phone = (bookingForm.phone || '').trim();
   bookingForm.date = (bookingForm.date || '').trim();
@@ -1697,7 +1699,17 @@ function validateAndSubmitBooking() {
   bookingForm.people = String(bookingForm.people || '').trim();
 
   if (!bookingForm.name || !bookingForm.phone || !bookingForm.date || !bookingForm.time || !bookingForm.people) {
-    alert('Merci de compléter tous les champs obligatoires.');
+    alert(tBooking.bookingRequiredAlert);
+    renderMenu();
+    return;
+  }
+
+  const normalizedPhone = bookingForm.phone.replace(/[^\d+]/g, '');
+  const digitCount = normalizedPhone.replace(/\D/g, '').length;
+  const phonePattern = /^\+?[0-9]{8,15}$/;
+
+  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+    alert(tBooking.bookingInvalidPhoneAlert);
     renderMenu();
     return;
   }
@@ -1708,7 +1720,9 @@ function validateAndSubmitBooking() {
     return;
   }
 
-  alert(getBookingTexts(currentLang).bookingPendingAlert);
+  bookingForm.phone = normalizedPhone;
+
+  alert(tBooking.bookingPendingAlert);
 }
 
 function activateOrderMode() {

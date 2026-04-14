@@ -1480,6 +1480,13 @@ const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
       }
     }
 function activateOrderMode() {
+  if (!siteConfig.modules?.ordering) {
+    orderMode = false;
+    cartPanelOpen = false;
+    orderReviewOpen = false;
+    return;
+  }
+
   orderMode = true;
   cartPanelOpen = false;
   orderReviewOpen = false;
@@ -1491,16 +1498,16 @@ function activateOrderMode() {
   renderMenu();
 
   requestAnimationFrame(() => {
-  const target =
-  document.getElementById('menu-snacks') ||
-  document.getElementById('menu-entrees') ||
-  document.getElementById('menu-plats');
+    const target =
+      document.getElementById('menu-snacks') ||
+      document.getElementById('menu-entrees') ||
+      document.getElementById('menu-plats');
 
-if (target) {
-  target.scrollIntoView({ behavior: 'auto', block: 'start' });
-} else {
-  window.scrollTo({ top: 0, behavior: 'auto' });
-}
+    if (target) {
+      target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   });
 }
 

@@ -1769,11 +1769,23 @@ function deactivateOrderMode() {
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
+function resetBookingForm() {
+  bookingForm = {
+    name: '',
+    phone: '',
+    date: '',
+    time: '',
+    people: '2',
+    note: ''
+  };
+}
+
 function deactivateBookingMode() {
   bookingMode = false;
   orderMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
+  resetBookingForm();
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
@@ -1783,6 +1795,7 @@ function backToMainScreen() {
   bookingMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
+  resetBookingForm();
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
 }

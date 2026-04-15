@@ -22,7 +22,7 @@
     "categories": [
       {
         "id": "entrees",
-        "name": "Entrées",
+        "name": "Nos entrées test",
         "order": 1,
         "items": [
           {
@@ -31,7 +31,7 @@
             "subtitle": "Servies chaudes et croustillantes",
             "price": 12.5,
             "visible": true,
-     "available": true
+            "available": true
           },
           {
             "id": "camembert-frit",

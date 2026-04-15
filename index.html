@@ -1679,8 +1679,8 @@ function validateAndSubmitBooking() {
   const digitCount = normalizedPhone.replace(/\D/g, '').length;
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
-  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    alert(tBooking.bookingInvalidPhoneAlert);
+   if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+    alert(`${t.orderFormPhone}\n\nVeuillez entrer un numéro de téléphone valide.\nExemple : +34612345678`);
     renderMenu();
     return;
   }

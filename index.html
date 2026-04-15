@@ -2157,12 +2157,14 @@ function renderMenuItem(item, t) {
       return categoryKey === 'allergenes' ? 'icon-gold' : 'icon-red';
     }
 
-  function renderCategory(categoryKey, categoryLabel, t) {
+function renderCategory(categoryKey, categoryLabel, t) {
       const categoryMeta = menuMeta.categories[categoryKey] || {};
-      const items = (menuData[categoryKey] || []).filter(item => item && item.visible !== false);
       if (!menuData[categoryKey]) return '';
-
       if (categoryMeta.visible === false) return '';
+
+      const items = (menuData[categoryKey] || []).filter(
+        item => item && item.visible !== false && item.available !== false
+      );
 
       const icon = categoryIcons[categoryKey] || 'utensils-crossed';
       const iconClass = getCategoryIconClass(categoryKey);

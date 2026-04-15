@@ -22,7 +22,7 @@
     "categories": [
       {
         "id": "entrees",
-        "name": "Nos entrées test",
+        "name": "Entrées",
         "order": 1,
         "items": [
           {

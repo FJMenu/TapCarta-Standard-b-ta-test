@@ -1874,7 +1874,14 @@ function validateOrderReview() {
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
 if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    alert(`${t.orderFormPhone}\n\n${tBooking.bookingInvalidPhoneAlert}\nExemple : +34612345678`);
+    const phoneExampleByLang = {
+      fr: 'Exemple : +34612345678',
+      es: 'Ejemplo: +34612345678',
+      en: 'Example: +34612345678',
+      nl: 'Voorbeeld: +34612345678'
+    };
+
+    alert(`${tBooking.bookingInvalidPhoneAlert}\n${phoneExampleByLang[currentLang] || phoneExampleByLang.fr}`);
     renderMenu();
     return;
   }

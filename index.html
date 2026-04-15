@@ -681,6 +681,22 @@ let menuData = {
   boissons: []
 };
 
+let menuMeta = {
+  updatedAt: null,
+  menuVersion: null,
+  categories: {
+    snacks: { visible: true, order: 9999, updatedAt: null },
+    entrees: { visible: true, order: 9999, updatedAt: null },
+    plats: { visible: true, order: 9999, updatedAt: null },
+    moules: { visible: true, order: 9999, updatedAt: null },
+    desserts: { visible: true, order: 9999, updatedAt: null },
+    crepes: { visible: true, order: 9999, updatedAt: null },
+    suggestions: { visible: true, order: 9999, updatedAt: null },
+    supplements: { visible: true, order: 9999, updatedAt: null },
+    boissons: { visible: true, order: 9999, updatedAt: null }
+  }
+};
+
 function formatAdminPrice(price) {
   if (price === null || price === undefined || price === '') return '';
   const numericPrice = Number(price);
@@ -694,12 +710,33 @@ function mapAdminItems(items) {
   return items
     .filter(item => item && item.visible !== false)
     .sort((a, b) => (a.order || 9999) - (b.order || 9999))
-    .map(item => ({
-      id: item.id || `item-${Date.now()}`,
+    .map((item, index) => ({
+      id: item.id || `item-${index + 1}`,
       price: formatAdminPrice(item.price),
       adminName: item.name || '',
-      adminSubtitle: item.subtitle || ''
+      adminSubtitle: item.subtitle || '',
+      visible: item.visible !== false,
+      available: item.available !== false,
+      order: Number.isFinite(item.order) ? item.order : 9999,
+      updatedAt: item.updatedAt || null
     }));
+}
+
+function resetMenuData() {
+  Object.keys(menuData).forEach(categoryKey => {
+    menuData[categoryKey] = [];
+  });
+
+  Object.keys(menuMeta.categories).forEach(categoryKey => {
+    menuMeta.categories[categoryKey] = {
+      visible: true,
+      order: 9999,
+      updatedAt: null
+    };
+  });
+
+  menuMeta.updatedAt = null;
+  menuMeta.menuVersion = null;
 }
 
 async function loadRestaurantData() {
@@ -710,18 +747,18 @@ async function loadRestaurantData() {
 
   const restaurantData = await response.json();
 
-if (restaurantData?.identity?.name) {
-  siteConfig.restaurantName = restaurantData.identity.name;
-}
+  if (restaurantData?.identity?.name) {
+    siteConfig.restaurantName = restaurantData.identity.name;
+  }
 
-siteConfig.modules = {
-  ordering: restaurantData?.modules?.ordering !== false,
-  booking: restaurantData?.modules?.booking !== false,
-  googleReviews: restaurantData?.modules?.googleReviews !== false,
-  whatsapp: restaurantData?.modules?.whatsapp !== false
-};
+  siteConfig.modules = {
+    ordering: restaurantData?.modules?.ordering !== false,
+    booking: restaurantData?.modules?.booking !== false,
+    googleReviews: restaurantData?.modules?.googleReviews !== false,
+    whatsapp: restaurantData?.modules?.whatsapp !== false
+  };
 
-if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
+  if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
     supportedLangs.length = 0;
     restaurantData.identity.languages.forEach(lang => {
       if (translations[lang]) supportedLangs.push(lang);
@@ -732,20 +769,32 @@ if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identit
     }
   }
 
-Object.keys(menuData).forEach(categoryKey => {
-  menuData[categoryKey] = [];
-});
+  resetMenuData();
 
-if (Array.isArray(restaurantData?.menu?.categories)) {
-  restaurantData.menu.categories.forEach(category => {
-    if (!category?.id) return;
-    if (!Object.prototype.hasOwnProperty.call(menuData, category.id)) return;
+  menuMeta.updatedAt = restaurantData?.menu?.updatedAt || null;
+  menuMeta.menuVersion = restaurantData?.menu?.menuVersion || null;
 
-    menuData[category.id] = mapAdminItems(category.items);
-  });
-}
+  if (Array.isArray(restaurantData?.menu?.categories)) {
+    restaurantData.menu.categories.forEach(category => {
+      if (!category?.id) return;
+      if (!Object.prototype.hasOwnProperty.call(menuData, category.id)) return;
 
-return restaurantData;
+      menuMeta.categories[category.id] = {
+        visible: category.visible !== false,
+        order: Number.isFinite(category.order) ? category.order : 9999,
+        updatedAt: category.updatedAt || null
+      };
+
+      if (category.visible === false) {
+        menuData[category.id] = [];
+        return;
+      }
+
+      menuData[category.id] = mapAdminItems(category.items);
+    });
+  }
+
+  return restaurantData;
 }
 
     const translations = {

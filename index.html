@@ -1873,8 +1873,8 @@ function validateOrderReview() {
   const digitCount = normalizedPhone.replace(/\D/g, '').length;
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
-  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    alert(tBooking.bookingInvalidPhoneAlert);
+if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+    alert(`${t.orderFormPhone}\n\n${tBooking.bookingInvalidPhoneAlert}\nExemple : +34612345678`);
     renderMenu();
     return;
   }

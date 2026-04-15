@@ -2346,8 +2346,8 @@ const menuHTML = visibleCategoryKeys
   <div id="logo-container" class="mx-auto w-full max-w-4xl flex items-center justify-center">
     ${siteConfig.logoUrl
       ? `<img src="${siteConfig.logoUrl}" alt="La Bonne Fourchette" class="w-auto h-auto max-w-md mx-auto" loading="eager" fetchpriority="high" decoding="async" style="object-fit:contain; max-height:260px; display:block;">`
-      : `<div class="text-center px-6">
-          <p class="font-display text-3xl md:text-4xl font-bold text-gold mb-2">La Bonne Fourchette</p>
+  : `<div class="text-center px-6">
+          <p class="font-display text-3xl md:text-4xl font-bold text-gold mb-2">${siteConfig.restaurantName || siteConfig.productName}</p>
           <p class="text-xs text-cream/40">${t.logoPlaceholder}</p>
         </div>`
     }

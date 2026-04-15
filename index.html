@@ -1843,6 +1843,7 @@ function closeOrderReview() {
 
 function validateOrderReview() {
   const t = translations[currentLang];
+  const tBooking = getBookingTexts(currentLang);
 
   if (!siteConfig.modules?.ordering) {
     orderReviewOpen = false;
@@ -1850,10 +1851,10 @@ function validateOrderReview() {
     return;
   }
 
-  const name = (orderForm.name || '').trim();
-  const phone = (orderForm.phone || '').trim();
-  const date = (orderForm.date || '').trim();
-  const time = (orderForm.time || '').trim();
+  orderForm.name = (orderForm.name || '').trim();
+  orderForm.phone = (orderForm.phone || '').trim();
+  orderForm.date = (orderForm.date || '').trim();
+  orderForm.time = (orderForm.time || '').trim();
 
   if (!cart.length) {
     alert(t.cartEmpty);
@@ -1862,10 +1863,23 @@ function validateOrderReview() {
     return;
   }
 
-  if (!name || !phone || !date || !time) {
+  if (!orderForm.name || !orderForm.phone || !orderForm.date || !orderForm.time) {
     alert(`${t.orderFormTitle}\n\n- ${t.orderFormName}\n- ${t.orderFormPhone}\n- ${t.orderFormDate}\n- ${t.orderFormTime}`);
+    renderMenu();
     return;
   }
+
+  const normalizedPhone = orderForm.phone.replace(/[^\d+]/g, '');
+  const digitCount = normalizedPhone.replace(/\D/g, '').length;
+  const phonePattern = /^\+?[0-9]{8,15}$/;
+
+  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+    alert(tBooking.bookingInvalidPhoneAlert);
+    renderMenu();
+    return;
+  }
+
+  orderForm.phone = normalizedPhone;
 
   alert(`${t.reviewTitle}\n\n${t.reviewPendingMessage}`);
 }

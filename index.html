@@ -2312,9 +2312,17 @@ function renderMenu() {
   document.documentElement.lang = currentLang;
   document.title = siteConfig.restaurantName || siteConfig.productName;
 
-      const visibleCategoryKeys = Object.keys(menuData).filter(categoryKey =>
-  Array.isArray(menuData[categoryKey]) && menuData[categoryKey].length > 0
-);
+const visibleCategoryKeys = Object.keys(menuData)
+  .filter(categoryKey =>
+    menuMeta.categories[categoryKey]?.visible !== false &&
+    Array.isArray(menuData[categoryKey]) &&
+    menuData[categoryKey].length > 0
+  )
+  .sort((a, b) => {
+    const orderA = menuMeta.categories[a]?.order ?? 9999;
+    const orderB = menuMeta.categories[b]?.order ?? 9999;
+    return orderA - orderB;
+  });
 
 const menuHTML = visibleCategoryKeys
   .map(categoryKey => renderCategory(categoryKey, t[categoryKey], t))

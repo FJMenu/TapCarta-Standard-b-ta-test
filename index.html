@@ -779,12 +779,12 @@ async function loadRestaurantData() {
       if (!category?.id) return;
       if (!Object.prototype.hasOwnProperty.call(menuData, category.id)) return;
 
-      menuMeta.categories[category.id] = {
+ menuMeta.categories[category.id] = {
         visible: category.visible !== false,
         order: Number.isFinite(category.order) ? category.order : 9999,
-        updatedAt: category.updatedAt || null
+        updatedAt: category.updatedAt || null,
+        name: category.name || ''
       };
-
       if (category.visible === false) {
         menuData[category.id] = [];
         return;

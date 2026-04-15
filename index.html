@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.16';
+    const APP_VERSION = '1.0.17';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -2116,6 +2116,14 @@ function renderMenuItem(item, t) {
   const itemData = t.items[item.id] || {};
   const itemTitle = item.adminName || itemData.name || '';
   const itemSubtitle = item.adminSubtitle || itemData.subtitle || '';
+  const isAvailable = item.available !== false;
+
+  const unavailableLabelByLang = {
+    fr: 'Indisponible',
+    es: 'No disponible',
+    en: 'Unavailable',
+    nl: 'Niet beschikbaar'
+  };
 
   if (!itemTitle && !item.price && !item.noPrice && !item.specialPriceText) return '';
 
@@ -2129,16 +2137,26 @@ function renderMenuItem(item, t) {
     priceDisplay = `<span class="text-sm font-semibold text-gold ml-4 whitespace-nowrap">${t[item.specialPriceText]}</span>`;
   }
 
-  const actionButton = orderMode && !item.noPrice
-    ? `
-      <button onclick="addToCart('${item.id}')" class="btn-action ml-3 px-3 py-1.5 rounded-lg border border-gold/50 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
-        ${t.addButton}
-      </button>
-    `
-    : '';
+  let actionButton = '';
+
+  if (orderMode && !item.noPrice) {
+    if (isAvailable) {
+      actionButton = `
+        <button onclick="addToCart('${item.id}')" class="btn-action ml-3 px-3 py-1.5 rounded-lg border border-gold/50 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
+          ${t.addButton}
+        </button>
+      `;
+    } else {
+      actionButton = `
+        <span class="ml-3 px-3 py-1.5 rounded-lg border border-cream/20 text-xs font-semibold text-cream/50 whitespace-nowrap">
+          ${unavailableLabelByLang[currentLang] || unavailableLabelByLang.fr}
+        </span>
+      `;
+    }
+  }
 
   return `
-    <div class="menu-item-row flex justify-between items-center py-2.5 px-3 rounded-lg">
+    <div class="menu-item-row flex justify-between items-center py-2.5 px-3 rounded-lg ${!isAvailable ? 'opacity-60' : ''}">
       <div class="flex-1 min-w-0">
         <span class="text-sm text-cream/90">${itemTitle}</span>
         ${itemSubtitle ? `<div class="menu-item-subtitle">${itemSubtitle}</div>` : ''}

@@ -2332,7 +2332,13 @@ const visibleCategoryKeys = Object.keys(menuData)
   });
 
 const menuHTML = visibleCategoryKeys
-  .map(categoryKey => renderCategory(categoryKey, t[categoryKey], t))
+  .map(categoryKey => {
+    const categoryLabel =
+      menuMeta.categories[categoryKey]?.name ||
+      t[categoryKey];
+
+    return renderCategory(categoryKey, categoryLabel, t);
+  })
   .join('');
 
       wrapper.innerHTML = `

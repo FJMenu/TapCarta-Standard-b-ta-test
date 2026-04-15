@@ -31,7 +31,7 @@
             "subtitle": "Servies chaudes et croustillantes",
             "price": 12.5,
             "visible": true,
-     "available": false
+     "available": true
           },
           {
             "id": "camembert-frit",

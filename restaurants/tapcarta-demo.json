@@ -30,7 +30,7 @@
       "name": "Croquettes de fromage",
       "subtitle": "Servies chaudes et croustillantes",
       "price": 12.5,
-      "visible": true
+      "visible": false
     },
     {
       "id": "camembert-frit",

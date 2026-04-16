@@ -1304,8 +1304,11 @@ function getBookingTexts(lang) {
       bookingTime: 'Heure *',
       bookingPeople: 'Nombre de personnes *',
       bookingPeoplePlaceholder: '2',
-      bookingNote: 'Remarque',
+       bookingNote: 'Remarque',
       bookingNotePlaceholder: 'Remarque éventuelle',
+      bookingPreorder: 'Plats souhaités (facultatif)',
+      bookingPreorderPlaceholder: 'Ex. 2 croquettes, 1 camembert frit',
+      bookingPreorderHelp: 'Indication facultative pour aider le restaurant à anticiper sa mise en place. Ce n’est pas une commande ferme.',
 bookingSubmit: 'Envoyer la réservation',
 bookingPendingAlert: 'Envoi réservation à raccorder',
 bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
@@ -1326,6 +1329,9 @@ bookingBackToHome: 'Retour à l’accueil'
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Observación',
       bookingNotePlaceholder: 'Observación opcional',
+      bookingPreorder: 'Platos deseados (opcional)',
+      bookingPreorderPlaceholder: 'Ej. 2 croquetas, 1 camembert frito',
+      bookingPreorderHelp: 'Indicación opcional para ayudar al restaurante a anticipar su mise en place. No es un pedido firme.',
 bookingSubmit: 'Enviar la reserva',
 bookingPendingAlert: 'Envío de reserva por conectar',
 bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
@@ -1344,8 +1350,11 @@ bookingBackToHome: 'Volver al inicio'
       bookingTime: 'Time *',
       bookingPeople: 'Number of guests *',
       bookingPeoplePlaceholder: '2',
-      bookingNote: 'Note',
+       bookingNote: 'Note',
       bookingNotePlaceholder: 'Optional note',
+      bookingPreorder: 'Preferred dishes (optional)',
+      bookingPreorderPlaceholder: 'E.g. 2 cheese croquettes, 1 fried camembert',
+      bookingPreorderHelp: 'Optional indication to help the restaurant anticipate preparation. This is not a firm order.',
   bookingSubmit: 'Send reservation',
 bookingPendingAlert: 'Reservation sending to be connected',
 bookingRequiredAlert: 'Please complete all required fields.',
@@ -1366,10 +1375,14 @@ bookingBackToHome: 'Back to home'
       bookingPeoplePlaceholder: '2',
       bookingNote: 'Opmerking',
       bookingNotePlaceholder: 'Eventuele opmerking',
+      bookingPreorder: 'Gewenste gerechten (optioneel)',
+      bookingPreorderPlaceholder: 'Bv. 2 kaaskroketten, 1 gefrituurde camembert',
+      bookingPreorderHelp: 'Optionele indicatie om het restaurant te helpen bij de voorbereiding. Dit is geen vaste bestelling.',
 bookingSubmit: 'Reservatie versturen',
 bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
 bookingRequiredAlert: 'Vul alle verplichte velden in.',
-bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.'
+bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.',
+bookingBackToHome: 'Terug naar start'
     }
   };
 
@@ -1420,7 +1433,8 @@ let bookingForm = {
   date: '',
   time: '',
   people: '2',
-  note: ''
+  note: '',
+  preorder: ''
 };
 
 const VERSION_STORAGE_KEY = 'tapcarta-last-loaded-version';

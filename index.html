@@ -2474,6 +2474,12 @@ ${bookingMode ? `
           <label class="block text-xs font-semibold text-gold/90 mb-1">${getBookingTexts(currentLang).bookingNote}</label>
           <textarea rows="3" oninput="bookingForm.note = this.value" placeholder="${getBookingTexts(currentLang).bookingNotePlaceholder}" class="w-full rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50">${bookingForm.note || ''}</textarea>
         </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gold/90 mb-1">${getBookingTexts(currentLang).bookingPreorder}</label>
+          <textarea rows="3" oninput="bookingForm.preorder = this.value" placeholder="${getBookingTexts(currentLang).bookingPreorderPlaceholder}" class="w-full rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5 text-sm text-cream placeholder:text-cream/35 focus:outline-none focus:border-gold/50">${bookingForm.preorder || ''}</textarea>
+          <p class="mt-2 text-xs text-cream/55">${getBookingTexts(currentLang).bookingPreorderHelp}</p>
+        </div>
       </div>
 
       <div class="mt-4 flex justify-end">

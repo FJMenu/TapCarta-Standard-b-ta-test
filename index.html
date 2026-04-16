@@ -1813,6 +1813,15 @@ function getBookingPreorderSummary() {
     .join(', ');
 }
 
+function escapeBookingHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function deactivateBookingMode() {
   bookingMode = false;
   orderMode = false;
@@ -2542,13 +2551,13 @@ ${bookingMode ? `
                       : 'border-gold/20 bg-black/20 text-cream/75 hover:border-gold/50 hover:bg-gold/10'
                   }"
                 >
-                  ${escapeHtml(item.name)}
+                  ${escapeBookingHtml(item.name)}
                 </button>
               `;
             }).join('')}
           </div>
           ${Array.isArray(bookingForm.preorder) && bookingForm.preorder.length
-            ? `<p class="mt-3 text-xs text-gold/90">${escapeHtml(getBookingPreorderSummary())}</p>`
+            ? `<p class="mt-3 text-xs text-gold/90">${escapeBookingHtml(getBookingPreorderSummary())}</p>`
             : ''}
         </div>
       </div>

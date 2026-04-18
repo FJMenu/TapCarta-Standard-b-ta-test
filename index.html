@@ -1313,6 +1313,7 @@ function getBookingTexts(lang) {
       bookingPreorderHelp: 'Indication facultative pour aider le restaurant à anticiper sa mise en place. Ce n’est pas une commande ferme.',
 bookingSubmit: 'Envoyer la réservation',
 bookingPendingAlert: 'Votre demande de réservation a bien été envoyée. Elle est en attente de confirmation du restaurant.',
+bookingUpdatedAlert: 'Votre demande de réservation a bien été mise à jour. Elle reste en attente de confirmation du restaurant.',
 bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
 bookingInvalidPhoneAlert: 'Merci d’indiquer un numéro de téléphone valable.',
 bookingBackToHome: 'Retour à l’accueil',
@@ -1347,6 +1348,7 @@ bookingEditingSubmit: 'Mettre à jour la réservation'
       bookingPreorderHelp: 'Indicación opcional para ayudar al restaurante a anticipar su mise en place. No es un pedido firme.',
 bookingSubmit: 'Enviar la reserva',
 bookingPendingAlert: 'Envío de reserva por conectar',
+bookingUpdatedAlert: 'Su solicitud de reserva ha sido actualizada. Sigue pendiente de confirmación del restaurante.',
 bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
 bookingInvalidPhoneAlert: 'Por favor, indique un número de teléfono válido.',
 bookingBackToHome: 'Volver al inicio',
@@ -1381,6 +1383,7 @@ bookingEditingSubmit: 'Actualizar la reserva'
       bookingPreorderHelp: 'Optional indication to help the restaurant anticipate preparation. This is not a firm order.',
   bookingSubmit: 'Send reservation',
 bookingPendingAlert: 'Reservation sending to be connected',
+bookingUpdatedAlert: 'Your reservation request has been updated. It is still pending restaurant confirmation.',
 bookingRequiredAlert: 'Please complete all required fields.',
 bookingInvalidPhoneAlert: 'Please enter a valid phone number.',
 bookingBackToHome: 'Back to home',
@@ -1415,6 +1418,7 @@ bookingEditingSubmit: 'Update reservation'
       bookingPreorderHelp: 'Optionele indicatie om het restaurant te helpen bij de voorbereiding. Dit is geen vaste bestelling.',
 bookingSubmit: 'Reservatie versturen',
 bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
+bookingUpdatedAlert: 'Uw reservatieaanvraag werd bijgewerkt. Ze blijft in afwachting van bevestiging door het restaurant.',
 bookingRequiredAlert: 'Vul alle verplichte velden in.',
 bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.',
 bookingBackToHome: 'Terug naar start',
@@ -2049,6 +2053,7 @@ function validateAndSubmitBooking() {
     : (existingBookingRequest?.status || bookingRequest.status);
 
   let bookingRequests;
+  const isEditingExistingBooking = Boolean(existingBookingRequest);
 
   if (existingBookingRequest) {
     updateStoredBookingRequest(bookingRequest);
@@ -2062,7 +2067,7 @@ function validateAndSubmitBooking() {
   console.log('TapCarta booking request saved:', bookingRequest);
   console.log('TapCarta booking requests history:', bookingRequests);
 
-  alert(tBooking.bookingPendingAlert);
+  alert(isEditingExistingBooking ? tBooking.bookingUpdatedAlert : tBooking.bookingPendingAlert);
 }
 
 function activateOrderMode() {

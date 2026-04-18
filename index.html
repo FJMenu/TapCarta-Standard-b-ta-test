@@ -2377,7 +2377,14 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
 
   orderForm.phone = normalizedPhone;
 
-  alert(`${t.reviewValidateButton}\n\n${t.reviewTitle}`);
+  const confirmationMessageByLang = {
+  fr: "Votre commande a bien été envoyée au restaurant.\n\nElle est maintenant en attente de confirmation de sa part.",
+  es: "Tu pedido ha sido enviado correctamente al restaurante.\n\nAhora está pendiente de confirmación por su parte.",
+  en: "Your order has been sent to the restaurant.\n\nIt is now awaiting confirmation from them.",
+  nl: "Je bestelling is correct naar het restaurant verzonden.\n\nZe wacht nu op bevestiging van hun kant."
+};
+
+alert(confirmationMessageByLang[currentLang] || confirmationMessageByLang.fr);
 
 cart = [];
 orderReviewOpen = false;

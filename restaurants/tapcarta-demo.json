@@ -15,7 +15,7 @@
     "web": false,
     "ordering": true,
     "booking": true,
-    "preorderIndicative": true,
+    "preorderIndicative": false,
     "googleReviews": true,
     "whatsapp": true
   },

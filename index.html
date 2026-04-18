@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.21';
+    const APP_VERSION = 'V1.0.22';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1498,6 +1498,30 @@ let editingBookingRequestId = null;
 
 const VERSION_STORAGE_KEY = 'tapcarta-last-loaded-version';
 const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
+const CLIENT_VIEW_STORAGE_KEY = 'tapcarta-client-active-view';
+
+try {
+  const savedClientView = localStorage.getItem(CLIENT_VIEW_STORAGE_KEY);
+
+  if (savedClientView === 'order') {
+    orderMode = true;
+    bookingMode = false;
+  } else if (savedClientView === 'booking') {
+    bookingMode = true;
+    orderMode = false;
+  }
+} catch (error) {
+  console.warn('TapCarta: impossible de relire la vue client sauvegardée', error);
+}
+
+function persistClientActiveView() {
+  try {
+    const activeView = orderMode ? 'order' : bookingMode ? 'booking' : 'home';
+    localStorage.setItem(CLIENT_VIEW_STORAGE_KEY, activeView);
+  } catch (error) {
+    console.warn('TapCarta: impossible de sauvegarder la vue client active', error);
+  }
+}
 
     function isIos() {
       return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -3221,6 +3245,16 @@ function renderMenu() {
   const wrapper = document.getElementById('app-wrapper');
   document.documentElement.lang = currentLang;
   document.title = siteConfig.restaurantName || siteConfig.productName;
+
+  if (bookingMode) {
+    initializeBookingForm();
+  }
+
+  if (orderMode && !orderForm.date && !orderForm.time) {
+    initializeOrderForm();
+  }
+
+  persistClientActiveView();
 
 const visibleCategoryKeys = Object.keys(menuData)
   .filter(categoryKey =>

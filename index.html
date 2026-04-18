@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.18';
+    const APP_VERSION = '1.0.19';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1474,6 +1474,7 @@ let bookingForm = {
   note: '',
   preorder: []
 };
+let editingBookingRequestId = null;
 
 const VERSION_STORAGE_KEY = 'tapcarta-last-loaded-version';
 const VERSION_RELOAD_FLAG_KEY = 'tapcarta-version-reload-done';
@@ -1885,6 +1886,7 @@ function editLastBookingRequest() {
 
   if (!bookingRequest || bookingRequest.status === 'cancelled') return;
 
+  editingBookingRequestId = bookingRequest.requestId || null;
   loadBookingRequestIntoForm(bookingRequest);
   bookingMode = true;
   renderMenu();
@@ -1913,6 +1915,10 @@ function cancelLastBookingRequest() {
     status: 'cancelled',
     cancelledAt: new Date().toISOString()
   };
+
+  if (editingBookingRequestId && editingBookingRequestId === bookingRequest.requestId) {
+    editingBookingRequestId = null;
+  }
 
   updateStoredBookingRequest(updatedRequest);
   alert(tBooking.bookingCancelledAlert);
@@ -2017,8 +2023,29 @@ function validateAndSubmitBooking() {
 
   bookingForm.phone = normalizedPhone;
 
+  const existingBookingRequest = editingBookingRequestId
+    ? readBookingRequestsFromStorage().find((request) => request && request.requestId === editingBookingRequestId)
+    : null;
+
   const bookingRequest = buildBookingRequest();
-  const bookingRequests = saveBookingRequestLocally(bookingRequest);
+
+  bookingRequest.requestId = existingBookingRequest?.requestId || bookingRequest.requestId;
+  bookingRequest.createdAt = existingBookingRequest?.createdAt || bookingRequest.createdAt;
+  bookingRequest.updatedAt = existingBookingRequest ? new Date().toISOString() : null;
+  bookingRequest.status = existingBookingRequest?.status === 'cancelled'
+    ? 'pending'
+    : (existingBookingRequest?.status || bookingRequest.status);
+
+  let bookingRequests;
+
+  if (existingBookingRequest) {
+    updateStoredBookingRequest(bookingRequest);
+    bookingRequests = readBookingRequestsFromStorage();
+  } else {
+    bookingRequests = saveBookingRequestLocally(bookingRequest);
+  }
+
+  editingBookingRequestId = null;
 
   console.log('TapCarta booking request saved:', bookingRequest);
   console.log('TapCarta booking requests history:', bookingRequests);

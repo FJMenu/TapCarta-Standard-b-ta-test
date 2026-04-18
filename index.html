@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.20';
+    const APP_VERSION = 'V1.0.21';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1804,7 +1804,7 @@ function writeBookingRequestsToStorage(requests) {
   localStorage.setItem(getBookingStorageKey(), JSON.stringify(requests));
 }
 
-function saveBookingRequestLocally(bookingRequest) {
+function writeBookingRequestToSource(bookingRequest) {
   const maxItems = 20;
   const existingRequests = readBookingRequestsFromStorage();
   const updatedRequests = [bookingRequest, ...existingRequests].slice(0, maxItems);
@@ -1813,6 +1813,10 @@ function saveBookingRequestLocally(bookingRequest) {
   localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(bookingRequest));
 
   return updatedRequests;
+}
+
+function saveBookingRequestLocally(bookingRequest) {
+  return writeBookingRequestToSource(bookingRequest);
 }
 
 function getLastBookingRequest() {

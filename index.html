@@ -2068,6 +2068,16 @@ function validateAndSubmitBooking() {
   console.log('TapCarta booking requests history:', bookingRequests);
 
   alert(isEditingExistingBooking ? tBooking.bookingUpdatedAlert : tBooking.bookingPendingAlert);
+
+  resetBookingForm();
+  renderMenu();
+
+  setTimeout(() => {
+    const bookingCard = document.getElementById('client-booking-card');
+    if (bookingCard) {
+      bookingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
 }
 
 function activateOrderMode() {

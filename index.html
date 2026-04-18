@@ -654,13 +654,17 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
   const RESTAURANT_JSON_URL = './restaurants/tapcarta-demo.json';
 
 let siteConfig = {
+  identity: {
+    id: "tapcarta-demo",
+    name: "TapCarta Demo"
+  },
   logoUrl: "https://i.postimg.cc/bN0b11bS/logo-sans-fond.png",
   brandLogoUrl: "https://i.postimg.cc/sX7n1G14/Chat-GPT-Image-14-fevr-2026-15-23-38.png",
   productName: "TapCarta",
   productSignature: "Created by FJ",
   reviewUrl: "https://search.google.com/local/writereview?placeid=ChIJ3b0pGDb7wEcRs2VnXGk2mmE",
   desktopCollageUrl: "liege-collage.jpg",
-restaurantName: "TapCarta Demo",
+  restaurantName: "TapCarta Demo",
   modules: {
     ordering: true,
     booking: true,

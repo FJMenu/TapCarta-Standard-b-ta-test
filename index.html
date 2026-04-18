@@ -3134,12 +3134,12 @@ ${!orderMode ? `
 
       <div class="space-y-2">
         ${cart.length ? cart.map(cartItem => {
-          const itemData = t.items[cartItem.id];
-          if (!itemData) return '';
+          const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
+          if (!sourceItem) return '';
 
           return `
             <div class="flex items-center justify-between gap-3 rounded-lg border border-gold/15 bg-black/10 px-3 py-2">
-              <div class="text-sm text-cream/85">${itemData.name}</div>
+              <div class="text-sm text-cream/85">${sourceItem.name}</div>
               <div class="flex items-center gap-2">
                 <div class="text-xs font-semibold text-gold">x${cartItem.quantity}</div>
                 <button onclick="removeFromCart('${cartItem.id}')" class="btn-action px-2 py-1 rounded-md border border-gold/30 text-[11px] font-semibold text-cream/80 hover:bg-gold/10 transition-all">

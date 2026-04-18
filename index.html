@@ -1998,21 +1998,91 @@ function renderLastBookingRequestCard() {
   }
 
   const tBooking = getBookingTexts(currentLang);
-  const isCancelled = bookingRequest.status === 'cancelled';
+  const status = bookingRequest.status || 'pending';
+  const isCancelled = status === 'cancelled';
   const preorderItems = Array.isArray(bookingRequest.booking.preorderItems)
     ? bookingRequest.booking.preorderItems
     : [];
 
+  const statusLabel = getBookingStatusLabel(status);
+
+  const statusUi = status === 'confirmed'
+    ? {
+        card: 'border-emerald-400/35 bg-emerald-500/10',
+        badge: 'border-emerald-300/35 bg-emerald-500/15 text-emerald-200',
+        message: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100',
+        text: currentLang === 'fr'
+          ? 'Votre réservation a été confirmée par le restaurant.'
+          : currentLang === 'es'
+            ? 'Tu reserva ha sido confirmada por el restaurante.'
+            : currentLang === 'nl'
+              ? 'Je reservatie werd bevestigd door het restaurant.'
+              : 'Your reservation has been confirmed by the restaurant.'
+      }
+    : status === 'cancelled'
+      ? {
+          card: 'border-red-400/35 bg-red-500/10',
+          badge: 'border-red-300/35 bg-red-500/15 text-red-200',
+          message: 'border-red-300/20 bg-red-500/10 text-red-100',
+          text: currentLang === 'fr'
+            ? 'Cette réservation a été annulée.'
+            : currentLang === 'es'
+              ? 'Esta reserva ha sido cancelada.'
+              : currentLang === 'nl'
+                ? 'Deze reservatie werd geannuleerd.'
+                : 'This booking has been cancelled.'
+        }
+      : status === 'refused'
+        ? {
+            card: 'border-red-400/35 bg-red-500/10',
+            badge: 'border-red-300/35 bg-red-500/15 text-red-200',
+            message: 'border-red-300/20 bg-red-500/10 text-red-100',
+            text: currentLang === 'fr'
+              ? 'Le restaurant a refusé votre réservation.'
+              : currentLang === 'es'
+                ? 'El restaurante ha rechazado tu reserva.'
+                : currentLang === 'nl'
+                  ? 'Het restaurant heeft je reservatie geweigerd.'
+                  : 'The restaurant has refused your booking.'
+          }
+        : status === 'processing'
+          ? {
+              card: 'border-sky-400/35 bg-sky-500/10',
+              badge: 'border-sky-300/35 bg-sky-500/15 text-sky-100',
+              message: 'border-sky-300/20 bg-sky-500/10 text-sky-100',
+              text: currentLang === 'fr'
+                ? 'Le restaurant traite actuellement votre réservation.'
+                : currentLang === 'es'
+                  ? 'El restaurante está tratando actualmente tu reserva.'
+                  : currentLang === 'nl'
+                    ? 'Het restaurant verwerkt momenteel je reservatie.'
+                    : 'The restaurant is currently processing your booking.'
+            }
+          : {
+              card: 'border-amber-300/35 bg-amber-500/10',
+              badge: 'border-amber-300/35 bg-amber-500/15 text-amber-100',
+              message: 'border-amber-300/20 bg-amber-500/10 text-amber-100',
+              text: currentLang === 'fr'
+                ? 'Votre réservation a bien été envoyée et reste en attente de réponse.'
+                : currentLang === 'es'
+                  ? 'Tu reserva ha sido enviada correctamente y está pendiente de respuesta.'
+                  : currentLang === 'nl'
+                    ? 'Je reservatie is goed verzonden en wacht op een antwoord.'
+                    : 'Your booking has been sent and is awaiting a reply.'
+            };
+
   return `
-    <div id="client-booking-card" class="mt-4 rounded-2xl border border-gold/30 bg-black/20 p-4">
+    <div id="client-booking-card" class="mt-4 rounded-2xl border ${statusUi.card} p-4">
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div class="text-xs font-semibold uppercase tracking-wide text-gold/85">
             ${tBooking.bookingLastRequestTitle}
           </div>
-          <div class="mt-2 text-sm text-cream/90">
-            <span class="font-semibold text-gold/90">${tBooking.bookingStatusLabel} :</span>
-            ${escapeBookingHtml(getBookingStatusLabel(bookingRequest.status || 'pending'))}
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span class="text-sm font-semibold text-gold/90">${tBooking.bookingStatusLabel} :</span>
+            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusUi.badge}">
+              ${escapeBookingHtml(statusLabel)}
+            </span>
           </div>
         </div>
 
@@ -2027,6 +2097,10 @@ function renderLastBookingRequestCard() {
             ${tBooking.bookingActionCancel}
           </button>
         </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border px-3 py-3 text-sm ${statusUi.message}">
+        ${escapeBookingHtml(statusUi.text)}
       </div>
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">

@@ -2297,6 +2297,8 @@ function toggleCartPanel() {
 }
 
 function openOrderReview() {
+  const t = translations[currentLang];
+
   if (!siteConfig.modules?.ordering) {
     orderReviewOpen = false;
     renderMenu();
@@ -2304,6 +2306,16 @@ function openOrderReview() {
   }
 
   if (!cart.length) {
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
+  orderForm.name = (orderForm.name || '').trim();
+  orderForm.phone = (orderForm.phone || '').trim();
+
+  if (!orderForm.name || !orderForm.phone) {
+    alert(`${t.orderFormTitle}\n\n- ${t.orderFormName}\n- ${t.orderFormPhone}`);
     orderReviewOpen = false;
     renderMenu();
     return;

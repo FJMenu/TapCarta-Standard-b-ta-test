@@ -1324,7 +1324,9 @@ bookingActionView: 'Voir',
 bookingActionEdit: 'Modifier',
 bookingActionCancel: 'Annuler',
 bookingCancelConfirm: 'Voulez-vous vraiment annuler cette demande de réservation ?',
-bookingCancelledAlert: 'Votre demande de réservation a été annulée.'
+bookingCancelledAlert: 'Votre demande de réservation a été annulée.',
+bookingEditingBanner: 'Vous modifiez votre demande de réservation existante.',
+bookingEditingSubmit: 'Mettre à jour la réservation'
     },
     es: {
       bookingButton: 'Reservar',
@@ -1356,7 +1358,9 @@ bookingActionView: 'Ver',
 bookingActionEdit: 'Modificar',
 bookingActionCancel: 'Cancelar',
 bookingCancelConfirm: '¿Desea realmente cancelar esta solicitud de reserva?',
-bookingCancelledAlert: 'Su solicitud de reserva ha sido cancelada.'
+bookingCancelledAlert: 'Su solicitud de reserva ha sido cancelada.',
+bookingEditingBanner: 'Está modificando su solicitud de reserva existente.',
+bookingEditingSubmit: 'Actualizar la reserva'
     },
     en: {
       bookingButton: 'Book',
@@ -1388,7 +1392,9 @@ bookingActionView: 'View',
 bookingActionEdit: 'Edit',
 bookingActionCancel: 'Cancel',
 bookingCancelConfirm: 'Do you really want to cancel this reservation request?',
-bookingCancelledAlert: 'Your reservation request has been cancelled.'
+bookingCancelledAlert: 'Your reservation request has been cancelled.',
+bookingEditingBanner: 'You are editing your existing reservation request.',
+bookingEditingSubmit: 'Update reservation'
     },
     nl: {
       bookingButton: 'Reserveren',
@@ -1420,7 +1426,9 @@ bookingActionView: 'Bekijken',
 bookingActionEdit: 'Wijzigen',
 bookingActionCancel: 'Annuleren',
 bookingCancelConfirm: 'Wilt u deze reservatieaanvraag echt annuleren?',
-bookingCancelledAlert: 'Uw reservatieaanvraag werd geannuleerd.'
+bookingCancelledAlert: 'Uw reservatieaanvraag werd geannuleerd.',
+bookingEditingBanner: 'U wijzigt uw bestaande reservatieaanvraag.',
+bookingEditingSubmit: 'Reservatie bijwerken'
     }
   };
 
@@ -1846,6 +1854,10 @@ function getBookingStatusLabel(status) {
   }
 
   return tBooking.bookingStatusPending;
+}
+
+function isEditingBookingRequest() {
+  return Boolean(editingBookingRequestId);
 }
 
 function buildBookingRequestSummaryText(bookingRequest) {

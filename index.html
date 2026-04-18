@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.19';
+    const APP_VERSION = 'V1.0.20';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1314,6 +1314,7 @@ function getBookingTexts(lang) {
 bookingSubmit: 'Envoyer la réservation',
 bookingPendingAlert: 'Votre demande de réservation a bien été envoyée. Elle est en attente de confirmation du restaurant.',
 bookingUpdatedAlert: 'Votre demande de réservation a bien été mise à jour. Elle reste en attente de confirmation du restaurant.',
+bookingUpdatedAtLabel: 'Dernière mise à jour',
 bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
 bookingInvalidPhoneAlert: 'Merci d’indiquer un numéro de téléphone valable.',
 bookingBackToHome: 'Retour à l’accueil',
@@ -1349,6 +1350,7 @@ bookingEditingSubmit: 'Mettre à jour la réservation'
 bookingSubmit: 'Enviar la reserva',
 bookingPendingAlert: 'Envío de reserva por conectar',
 bookingUpdatedAlert: 'Su solicitud de reserva ha sido actualizada. Sigue pendiente de confirmación del restaurante.',
+bookingUpdatedAtLabel: 'Última actualización',
 bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
 bookingInvalidPhoneAlert: 'Por favor, indique un número de teléfono válido.',
 bookingBackToHome: 'Volver al inicio',
@@ -1384,6 +1386,7 @@ bookingEditingSubmit: 'Actualizar la reserva'
   bookingSubmit: 'Send reservation',
 bookingPendingAlert: 'Reservation sending to be connected',
 bookingUpdatedAlert: 'Your reservation request has been updated. It is still pending restaurant confirmation.',
+bookingUpdatedAtLabel: 'Last update',
 bookingRequiredAlert: 'Please complete all required fields.',
 bookingInvalidPhoneAlert: 'Please enter a valid phone number.',
 bookingBackToHome: 'Back to home',
@@ -1419,6 +1422,7 @@ bookingEditingSubmit: 'Update reservation'
 bookingSubmit: 'Reservatie versturen',
 bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
 bookingUpdatedAlert: 'Uw reservatieaanvraag werd bijgewerkt. Ze blijft in afwachting van bevestiging door het restaurant.',
+bookingUpdatedAtLabel: 'Laatste update',
 bookingRequiredAlert: 'Vul alle verplichte velden in.',
 bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.',
 bookingBackToHome: 'Terug naar start',
@@ -1850,6 +1854,21 @@ function formatBookingDateForDisplay(dateValue) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
+function formatBookingDateTimeForDisplay(dateTimeValue) {
+  if (!dateTimeValue) return '';
+
+  const dateObj = new Date(dateTimeValue);
+  if (Number.isNaN(dateObj.getTime())) return '';
+
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  const hours = String(dateObj.getHours()).padStart(2, '0');
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
 function getBookingStatusLabel(status) {
   const tBooking = getBookingTexts(currentLang);
 
@@ -1987,6 +2006,13 @@ function renderLastBookingRequestCard() {
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingTime} :</span> ${escapeBookingHtml(bookingRequest.booking.time || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingPeople} :</span> ${escapeBookingHtml(String(bookingRequest.booking.people || '-'))}</div>
       </div>
+
+      ${bookingRequest.updatedAt ? `
+        <div class="mt-3 text-sm text-cream/70">
+          <span class="text-gold/85 font-semibold">${tBooking.bookingUpdatedAtLabel} :</span>
+          ${escapeBookingHtml(formatBookingDateTimeForDisplay(bookingRequest.updatedAt))}
+        </div>
+      ` : ''}
 
       ${bookingRequest.booking.note ? `
         <div class="mt-3 text-sm text-cream/80">

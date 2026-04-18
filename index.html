@@ -2174,6 +2174,7 @@ function deactivateBookingMode() {
   orderMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
+  editingBookingRequestId = null;
   resetBookingForm();
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
@@ -2184,6 +2185,7 @@ function backToMainScreen() {
   bookingMode = false;
   cartPanelOpen = false;
   orderReviewOpen = false;
+  editingBookingRequestId = null;
   resetBookingForm();
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
@@ -2195,6 +2197,7 @@ function activateBookingMode() {
     return;
   }
 
+  editingBookingRequestId = null;
   resetBookingForm();
 
   bookingMode = true;

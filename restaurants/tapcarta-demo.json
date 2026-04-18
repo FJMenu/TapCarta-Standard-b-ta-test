@@ -31,14 +31,14 @@
             "name": "Croquettes de fromage",
             "subtitle": "Servies chaudes et croustillantes",
             "price": 12.5,
-            "visible": false
+            "visible": true
           },
           {
             "id": "camembert-frit",
             "name": "Camembert frit",
             "subtitle": "Panure dorée, cœur fondant",
             "price": 12.5,
-            "visible": false
+            "visible": true
           }
         ]
       }

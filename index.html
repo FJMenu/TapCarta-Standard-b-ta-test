@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = '1.0.17';
+    const APP_VERSION = '1.0.18';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -1678,6 +1678,48 @@ function initializeBookingForm() {
   };
 }
 
+function buildBookingRequest() {
+  const preorderEnabled = siteConfig.modules?.preorderIndicative !== false;
+  const preorderItems = preorderEnabled && Array.isArray(bookingForm.preorder)
+    ? bookingForm.preorder
+        .map((itemId) => {
+          const option = getBookingPreorderOptions().find((item) => item.id === itemId);
+          if (!option) return null;
+
+          return {
+            id: option.id,
+            name: option.name,
+            category: option.categoryLabel
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  return {
+    requestType: 'booking',
+    requestId: `booking_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    restaurant: {
+      id: siteConfig?.identity?.id || '',
+      name: siteConfig?.restaurantName || ''
+    },
+    customer: {
+      name: bookingForm.name,
+      phone: bookingForm.phone,
+      language: currentLang
+    },
+    booking: {
+      date: bookingForm.date,
+      time: bookingForm.time,
+      people: Number(bookingForm.people),
+      note: bookingForm.note || '',
+      preorderIndicativeEnabled: preorderEnabled,
+      preorderItems
+    },
+    status: 'pending'
+  };
+}
+
 function validateAndSubmitBooking() {
   const tBooking = getBookingTexts(currentLang);
 
@@ -1686,6 +1728,7 @@ function validateAndSubmitBooking() {
   bookingForm.date = (bookingForm.date || '').trim();
   bookingForm.time = roundTimeToQuarter((bookingForm.time || '').trim());
   bookingForm.people = String(bookingForm.people || '').trim();
+  bookingForm.note = (bookingForm.note || '').trim();
 
   if (!bookingForm.name || !bookingForm.phone || !bookingForm.date || !bookingForm.time || !bookingForm.people) {
     alert(tBooking.bookingRequiredAlert);
@@ -1697,7 +1740,7 @@ function validateAndSubmitBooking() {
   const digitCount = normalizedPhone.replace(/\D/g, '').length;
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
-   if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
     alert(`${t.orderFormPhone}\n\nVeuillez entrer un numéro de téléphone valide.\nExemple : +34612345678`);
     renderMenu();
     return;
@@ -1710,6 +1753,11 @@ function validateAndSubmitBooking() {
   }
 
   bookingForm.phone = normalizedPhone;
+
+  const bookingRequest = buildBookingRequest();
+  localStorage.setItem('tapcarta_last_booking_request', JSON.stringify(bookingRequest));
+
+  console.log('TapCarta booking request saved:', bookingRequest);
 
   alert(tBooking.bookingPendingAlert);
 }

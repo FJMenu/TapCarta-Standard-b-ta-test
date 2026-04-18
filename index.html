@@ -1748,14 +1748,15 @@ function buildBookingRequest() {
         .filter(Boolean)
     : [];
 
+  const nowIso = new Date().toISOString();
+
   return {
-    requestType: 'booking',
+    restaurantId: siteConfig?.identity?.id || '',
     requestId: `booking_${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    restaurant: {
-      id: siteConfig?.identity?.id || '',
-      name: siteConfig?.restaurantName || ''
-    },
+    requestType: 'booking',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    status: 'pending',
     customer: {
       name: bookingForm.name,
       phone: bookingForm.phone,
@@ -1769,7 +1770,11 @@ function buildBookingRequest() {
       preorderIndicativeEnabled: preorderEnabled,
       preorderItems
     },
-    status: 'pending'
+    restaurantResponse: {
+      reason: '',
+      message: '',
+      updatedBy: ''
+    }
   };
 }
 

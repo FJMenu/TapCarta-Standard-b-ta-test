@@ -1876,6 +1876,36 @@ function getBookingStatusLabel(status) {
     return tBooking.bookingStatusCancelled;
   }
 
+  if (status === 'confirmed') {
+    return currentLang === 'fr'
+      ? 'Confirmée'
+      : currentLang === 'es'
+        ? 'Confirmada'
+        : currentLang === 'nl'
+          ? 'Bevestigd'
+          : 'Confirmed';
+  }
+
+  if (status === 'refused') {
+    return currentLang === 'fr'
+      ? 'Refusée'
+      : currentLang === 'es'
+        ? 'Rechazada'
+        : currentLang === 'nl'
+          ? 'Geweigerd'
+          : 'Refused';
+  }
+
+  if (status === 'processing') {
+    return currentLang === 'fr'
+      ? 'En cours de traitement'
+      : currentLang === 'es'
+        ? 'En tratamiento'
+        : currentLang === 'nl'
+          ? 'In behandeling'
+          : 'Processing';
+  }
+
   return tBooking.bookingStatusPending;
 }
 

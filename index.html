@@ -1665,6 +1665,7 @@ function roundTimeToQuarter(timeStr) {
 
 function initializeBookingForm() {
   const defaults = getDefaultOrderDateTime();
+  const preorderEnabled = siteConfig.modules?.preorderIndicative !== false;
 
   bookingForm = {
     name: bookingForm.name || '',
@@ -1673,7 +1674,7 @@ function initializeBookingForm() {
     time: bookingForm.time || roundTimeToQuarter(defaults.time),
     people: bookingForm.people || '2',
     note: bookingForm.note || '',
-    preorder: Array.isArray(bookingForm.preorder) ? bookingForm.preorder : []
+    preorder: preorderEnabled && Array.isArray(bookingForm.preorder) ? bookingForm.preorder : []
   };
 }
 
@@ -1793,6 +1794,11 @@ function getBookingPreorderOptions() {
 }
 
 function toggleBookingPreorder(itemId) {
+  if (siteConfig.modules?.preorderIndicative === false) {
+    bookingForm.preorder = [];
+    return;
+  }
+
   if (!Array.isArray(bookingForm.preorder)) {
     bookingForm.preorder = [];
   }

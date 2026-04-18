@@ -1315,7 +1315,16 @@ bookingSubmit: 'Envoyer la réservation',
 bookingPendingAlert: 'Votre demande de réservation a bien été envoyée. Elle est en attente de confirmation du restaurant.',
 bookingRequiredAlert: 'Merci de compléter tous les champs obligatoires.',
 bookingInvalidPhoneAlert: 'Merci d’indiquer un numéro de téléphone valable.',
-bookingBackToHome: 'Retour à l’accueil'
+bookingBackToHome: 'Retour à l’accueil',
+bookingLastRequestTitle: 'Ma demande de réservation',
+bookingStatusLabel: 'Statut',
+bookingStatusPending: 'En attente',
+bookingStatusCancelled: 'Annulée',
+bookingActionView: 'Voir',
+bookingActionEdit: 'Modifier',
+bookingActionCancel: 'Annuler',
+bookingCancelConfirm: 'Voulez-vous vraiment annuler cette demande de réservation ?',
+bookingCancelledAlert: 'Votre demande de réservation a été annulée.'
     },
     es: {
       bookingButton: 'Reservar',
@@ -1338,7 +1347,16 @@ bookingSubmit: 'Enviar la reserva',
 bookingPendingAlert: 'Envío de reserva por conectar',
 bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
 bookingInvalidPhoneAlert: 'Por favor, indique un número de teléfono válido.',
-bookingBackToHome: 'Volver al inicio'
+bookingBackToHome: 'Volver al inicio',
+bookingLastRequestTitle: 'Mi solicitud de reserva',
+bookingStatusLabel: 'Estado',
+bookingStatusPending: 'Pendiente',
+bookingStatusCancelled: 'Cancelada',
+bookingActionView: 'Ver',
+bookingActionEdit: 'Modificar',
+bookingActionCancel: 'Cancelar',
+bookingCancelConfirm: '¿Desea realmente cancelar esta solicitud de reserva?',
+bookingCancelledAlert: 'Su solicitud de reserva ha sido cancelada.'
     },
     en: {
       bookingButton: 'Book',
@@ -1361,7 +1379,16 @@ bookingBackToHome: 'Volver al inicio'
 bookingPendingAlert: 'Reservation sending to be connected',
 bookingRequiredAlert: 'Please complete all required fields.',
 bookingInvalidPhoneAlert: 'Please enter a valid phone number.',
-bookingBackToHome: 'Back to home'
+bookingBackToHome: 'Back to home',
+bookingLastRequestTitle: 'My reservation request',
+bookingStatusLabel: 'Status',
+bookingStatusPending: 'Pending',
+bookingStatusCancelled: 'Cancelled',
+bookingActionView: 'View',
+bookingActionEdit: 'Edit',
+bookingActionCancel: 'Cancel',
+bookingCancelConfirm: 'Do you really want to cancel this reservation request?',
+bookingCancelledAlert: 'Your reservation request has been cancelled.'
     },
     nl: {
       bookingButton: 'Reserveren',
@@ -1384,7 +1411,16 @@ bookingSubmit: 'Reservatie versturen',
 bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
 bookingRequiredAlert: 'Vul alle verplichte velden in.',
 bookingInvalidPhoneAlert: 'Geef een geldig telefoonnummer op.',
-bookingBackToHome: 'Terug naar start'
+bookingBackToHome: 'Terug naar start',
+bookingLastRequestTitle: 'Mijn reservatieaanvraag',
+bookingStatusLabel: 'Status',
+bookingStatusPending: 'In afwachting',
+bookingStatusCancelled: 'Geannuleerd',
+bookingActionView: 'Bekijken',
+bookingActionEdit: 'Wijzigen',
+bookingActionCancel: 'Annuleren',
+bookingCancelConfirm: 'Wilt u deze reservatieaanvraag echt annuleren?',
+bookingCancelledAlert: 'Uw reservatieaanvraag werd geannuleerd.'
     }
   };
 
@@ -1720,26 +1756,231 @@ function buildBookingRequest() {
   };
 }
 
-function saveBookingRequestLocally(bookingRequest) {
-  const storageKey = 'tapcarta_booking_requests';
-  const maxItems = 20;
+function getBookingStorageKey() {
+  return 'tapcarta_booking_requests';
+}
 
-  let existingRequests = [];
+function getLastBookingStorageKey() {
+  return 'tapcarta_last_booking_request';
+}
 
+function readBookingRequestsFromStorage() {
   try {
-    const raw = localStorage.getItem(storageKey);
+    const raw = localStorage.getItem(getBookingStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
-    existingRequests = Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    existingRequests = [];
+    return [];
   }
+}
 
+function writeBookingRequestsToStorage(requests) {
+  localStorage.setItem(getBookingStorageKey(), JSON.stringify(requests));
+}
+
+function saveBookingRequestLocally(bookingRequest) {
+  const maxItems = 20;
+  const existingRequests = readBookingRequestsFromStorage();
   const updatedRequests = [bookingRequest, ...existingRequests].slice(0, maxItems);
 
-  localStorage.setItem(storageKey, JSON.stringify(updatedRequests));
-  localStorage.setItem('tapcarta_last_booking_request', JSON.stringify(bookingRequest));
+  writeBookingRequestsToStorage(updatedRequests);
+  localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(bookingRequest));
 
   return updatedRequests;
+}
+
+function getLastBookingRequest() {
+  try {
+    const raw = localStorage.getItem(getLastBookingStorageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function updateStoredBookingRequest(updatedRequest) {
+  if (!updatedRequest || !updatedRequest.requestId) return null;
+
+  const existingRequests = readBookingRequestsFromStorage();
+  const updatedRequests = existingRequests.map((request) =>
+    request && request.requestId === updatedRequest.requestId ? updatedRequest : request
+  );
+
+  writeBookingRequestsToStorage(updatedRequests);
+  localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
+
+  return updatedRequest;
+}
+
+function loadBookingRequestIntoForm(bookingRequest) {
+  if (!bookingRequest || !bookingRequest.booking || !bookingRequest.customer) return;
+
+  bookingForm = {
+    name: bookingRequest.customer.name || '',
+    phone: bookingRequest.customer.phone || '',
+    date: bookingRequest.booking.date || '',
+    time: bookingRequest.booking.time || '',
+    people: String(bookingRequest.booking.people || '2'),
+    note: bookingRequest.booking.note || '',
+    preorder: Array.isArray(bookingRequest.booking.preorderItems)
+      ? bookingRequest.booking.preorderItems.map((item) => item.id).filter(Boolean)
+      : []
+  };
+}
+
+function formatBookingDateForDisplay(dateValue) {
+  if (!dateValue) return '-';
+
+  const parts = String(dateValue).split('-');
+  if (parts.length !== 3) return dateValue;
+
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function getBookingStatusLabel(status) {
+  const tBooking = getBookingTexts(currentLang);
+
+  if (status === 'cancelled') {
+    return tBooking.bookingStatusCancelled;
+  }
+
+  return tBooking.bookingStatusPending;
+}
+
+function buildBookingRequestSummaryText(bookingRequest) {
+  const tBooking = getBookingTexts(currentLang);
+  const lines = [
+    `${tBooking.bookingName}: ${bookingRequest?.customer?.name || '-'}`,
+    `${tBooking.bookingPhone}: ${bookingRequest?.customer?.phone || '-'}`,
+    `${tBooking.bookingDate}: ${formatBookingDateForDisplay(bookingRequest?.booking?.date || '')}`,
+    `${tBooking.bookingTime}: ${bookingRequest?.booking?.time || '-'}`,
+    `${tBooking.bookingPeople}: ${bookingRequest?.booking?.people || '-'}`,
+    `${tBooking.bookingStatusLabel}: ${getBookingStatusLabel(bookingRequest?.status || 'pending')}`
+  ];
+
+  if (bookingRequest?.booking?.note) {
+    lines.push(`${tBooking.bookingNote}: ${bookingRequest.booking.note}`);
+  }
+
+  const preorderItems = Array.isArray(bookingRequest?.booking?.preorderItems)
+    ? bookingRequest.booking.preorderItems
+    : [];
+
+  if (preorderItems.length) {
+    lines.push(`${tBooking.bookingPreorder}: ${preorderItems.map((item) => item.name).join(', ')}`);
+  }
+
+  return lines.join('\n');
+}
+
+function viewLastBookingRequest() {
+  const bookingRequest = getLastBookingRequest();
+  if (!bookingRequest) return;
+
+  alert(buildBookingRequestSummaryText(bookingRequest));
+}
+
+function editLastBookingRequest() {
+  const bookingRequest = getLastBookingRequest();
+
+  if (!bookingRequest || bookingRequest.status === 'cancelled') return;
+
+  loadBookingRequestIntoForm(bookingRequest);
+  bookingMode = true;
+  renderMenu();
+
+  setTimeout(() => {
+    const bookingCard = document.getElementById('client-booking-card');
+    if (bookingCard) {
+      bookingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
+}
+
+function cancelLastBookingRequest() {
+  const bookingRequest = getLastBookingRequest();
+
+  if (!bookingRequest || bookingRequest.status === 'cancelled') return;
+
+  const tBooking = getBookingTexts(currentLang);
+
+  if (!confirm(tBooking.bookingCancelConfirm)) {
+    return;
+  }
+
+  const updatedRequest = {
+    ...bookingRequest,
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString()
+  };
+
+  updateStoredBookingRequest(updatedRequest);
+  alert(tBooking.bookingCancelledAlert);
+  renderMenu();
+}
+
+function renderLastBookingRequestCard() {
+  const bookingRequest = getLastBookingRequest();
+
+  if (!bookingRequest || !bookingRequest.booking || !bookingRequest.customer) {
+    return '';
+  }
+
+  const tBooking = getBookingTexts(currentLang);
+  const isCancelled = bookingRequest.status === 'cancelled';
+  const preorderItems = Array.isArray(bookingRequest.booking.preorderItems)
+    ? bookingRequest.booking.preorderItems
+    : [];
+
+  return `
+    <div id="client-booking-card" class="mt-4 rounded-2xl border border-gold/30 bg-black/20 p-4">
+      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gold/85">
+            ${tBooking.bookingLastRequestTitle}
+          </div>
+          <div class="mt-2 text-sm text-cream/90">
+            <span class="font-semibold text-gold/90">${tBooking.bookingStatusLabel} :</span>
+            ${escapeBookingHtml(getBookingStatusLabel(bookingRequest.status || 'pending'))}
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button onclick="viewLastBookingRequest()" class="btn-action px-3 py-2 rounded-xl border border-gold/25 bg-black/20 text-xs font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
+            ${tBooking.bookingActionView}
+          </button>
+          <button onclick="editLastBookingRequest()" ${isCancelled ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${isCancelled ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-gold/25 bg-black/20 text-cream/85 hover:border-gold/50 hover:bg-gold/10'}">
+            ${tBooking.bookingActionEdit}
+          </button>
+          <button onclick="cancelLastBookingRequest()" ${isCancelled ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${isCancelled ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-red-400/40 bg-red-500/10 text-cream/90 hover:border-red-300/70 hover:bg-red-500/20'}">
+            ${tBooking.bookingActionCancel}
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingName} :</span> ${escapeBookingHtml(bookingRequest.customer.name || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingPhone} :</span> ${escapeBookingHtml(bookingRequest.customer.phone || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingDate} :</span> ${escapeBookingHtml(formatBookingDateForDisplay(bookingRequest.booking.date || ''))}</div>
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingTime} :</span> ${escapeBookingHtml(bookingRequest.booking.time || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingPeople} :</span> ${escapeBookingHtml(String(bookingRequest.booking.people || '-'))}</div>
+      </div>
+
+      ${bookingRequest.booking.note ? `
+        <div class="mt-3 text-sm text-cream/80">
+          <span class="text-gold/85 font-semibold">${tBooking.bookingNote} :</span>
+          ${escapeBookingHtml(bookingRequest.booking.note)}
+        </div>
+      ` : ''}
+
+      ${preorderItems.length ? `
+        <div class="mt-3 text-sm text-cream/80">
+          <span class="text-gold/85 font-semibold">${tBooking.bookingPreorder} :</span>
+          ${escapeBookingHtml(preorderItems.map((item) => item.name).join(', '))}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 function validateAndSubmitBooking() {
@@ -2539,6 +2780,8 @@ ${bookingMode ? `
   ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
+
+      ${renderLastBookingRequestCard()}
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>

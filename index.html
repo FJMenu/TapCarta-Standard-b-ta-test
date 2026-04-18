@@ -2365,7 +2365,20 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
 
   orderForm.phone = normalizedPhone;
 
-  alert(`${t.reviewTitle}\n\n${t.reviewPendingMessage}`);
+  alert(`${t.reviewValidateButton}\n\n${t.reviewTitle}`);
+
+cart = [];
+orderReviewOpen = false;
+
+orderForm = {
+  name: '',
+  phone: '',
+  date: '',
+  time: '',
+  note: ''
+};
+
+renderMenu();
 }
 
 function removeFromCart(itemId) {

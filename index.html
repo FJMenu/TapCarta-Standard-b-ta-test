@@ -2741,10 +2741,14 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
 
 const totalAmount = orderItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
 
+const nowIso = new Date().toISOString();
+
 const orderRequest = {
+  restaurantId: siteConfig?.identity?.id || '',
   requestId: `CMD-${Date.now()}`,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  requestType: 'order',
+  createdAt: nowIso,
+  updatedAt: nowIso,
   status: 'sent',
   customer: {
     name: orderForm.name,
@@ -2759,7 +2763,9 @@ const orderRequest = {
     totalAmount: Number(totalAmount.toFixed(2))
   },
   restaurantResponse: {
-    reason: ''
+    reason: '',
+    message: '',
+    updatedBy: ''
   }
 };
 

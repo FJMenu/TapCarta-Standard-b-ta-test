@@ -1720,6 +1720,28 @@ function buildBookingRequest() {
   };
 }
 
+function saveBookingRequestLocally(bookingRequest) {
+  const storageKey = 'tapcarta_booking_requests';
+  const maxItems = 20;
+
+  let existingRequests = [];
+
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    existingRequests = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    existingRequests = [];
+  }
+
+  const updatedRequests = [bookingRequest, ...existingRequests].slice(0, maxItems);
+
+  localStorage.setItem(storageKey, JSON.stringify(updatedRequests));
+  localStorage.setItem('tapcarta_last_booking_request', JSON.stringify(bookingRequest));
+
+  return updatedRequests;
+}
+
 function validateAndSubmitBooking() {
   const tBooking = getBookingTexts(currentLang);
 
@@ -1755,9 +1777,10 @@ function validateAndSubmitBooking() {
   bookingForm.phone = normalizedPhone;
 
   const bookingRequest = buildBookingRequest();
-  localStorage.setItem('tapcarta_last_booking_request', JSON.stringify(bookingRequest));
+  const bookingRequests = saveBookingRequestLocally(bookingRequest);
 
   console.log('TapCarta booking request saved:', bookingRequest);
+  console.log('TapCarta booking requests history:', bookingRequests);
 
   alert(tBooking.bookingPendingAlert);
 }

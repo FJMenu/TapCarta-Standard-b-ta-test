@@ -2931,7 +2931,7 @@ ${bookingMode ? `
       <div class="mt-4 flex justify-end">
 <button onclick="validateAndSubmitBooking()" class="btn-action flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
   <i data-lucide="calendar-check-2" class="w-4 h-4 text-gold"></i>
-  <span class="text-sm font-semibold text-cream tracking-wide">${getBookingTexts(currentLang).bookingSubmit}</span>
+  <span class="text-sm font-semibold text-cream tracking-wide">${isEditingBookingRequest() ? getBookingTexts(currentLang).bookingEditingSubmit : getBookingTexts(currentLang).bookingSubmit}</span>
 </button>
       </div>
     </div>

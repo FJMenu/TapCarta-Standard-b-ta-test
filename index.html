@@ -1905,7 +1905,9 @@ async function readBookingRequestsFromStorage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data)
+        ? data.map(mapLiveBookingRowToRequest).filter(Boolean)
+        : [];
     } catch (error) {
       console.error('Supabase booking read error:', error);
       return [];

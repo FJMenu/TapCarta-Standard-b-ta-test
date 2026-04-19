@@ -2393,10 +2393,10 @@ async function validateAndSubmitBooking() {
   const isEditingExistingBooking = Boolean(existingBookingRequest);
 
   if (existingBookingRequest) {
-    updateStoredBookingRequest(bookingRequest);
-    bookingRequests = readBookingRequestsFromStorage();
+    await updateStoredBookingRequest(bookingRequest);
+    bookingRequests = await readBookingRequestsFromStorage();
   } else {
-    bookingRequests = saveBookingRequestLocally(bookingRequest);
+    bookingRequests = await saveBookingRequestLocally(bookingRequest);
   }
 
   editingBookingRequestId = null;

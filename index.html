@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.23';
+    const APP_VERSION = 'V1.0.24';
 const LIVE_REQUESTS_ENABLED = true;
 const LIVE_RESTAURANT_ID = 'tapcarta-demo';
 
@@ -1884,9 +1884,37 @@ function writeBookingRequestsToStorage(requests) {
   localStorage.setItem(getBookingStorageKey(), JSON.stringify(requests));
 }
 
-function writeBookingRequestToSource(bookingRequest) {
+async function writeBookingRequestToSource(bookingRequest) {
+  if (LIVE_REQUESTS_ENABLED) {
+    const liveBooking = await insertLiveRequest({
+      restaurant_id: LIVE_RESTAURANT_ID,
+      type: 'booking',
+      client_name: bookingRequest?.booking?.customerName || '',
+      client_phone: bookingRequest?.booking?.customerPhone || '',
+      client_language: bookingRequest?.booking?.language || currentLanguage || 'fr',
+      booking_date: bookingRequest?.booking?.bookingDate || '',
+      booking_time: bookingRequest?.booking?.bookingTime || '',
+      party_size: Number(bookingRequest?.booking?.bookingPeople || 1),
+      items: normalizeRequestItems(bookingRequest?.booking?.selectedItems || []),
+      note: bookingRequest?.booking?.bookingNote || '',
+      status: 'pending'
+    });
+
+    const syncedBookingRequest = {
+      ...bookingRequest,
+      liveRequestId: liveBooking.id,
+      requestId: liveBooking.id,
+      status: liveBooking.status || 'pending',
+      createdAt: liveBooking.created_at || bookingRequest.createdAt,
+      updatedAt: liveBooking.updated_at || bookingRequest.updatedAt || null
+    };
+
+    localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(syncedBookingRequest));
+    return [syncedBookingRequest];
+  }
+
   const maxItems = 20;
-  const existingRequests = readBookingRequestsFromStorage();
+  const existingRequests = await readBookingRequestsFromStorage();
   const updatedRequests = [bookingRequest, ...existingRequests].slice(0, maxItems);
 
   writeBookingRequestsToStorage(updatedRequests);
@@ -1895,8 +1923,8 @@ function writeBookingRequestToSource(bookingRequest) {
   return updatedRequests;
 }
 
-function saveBookingRequestLocally(bookingRequest) {
-  return writeBookingRequestToSource(bookingRequest);
+async function saveBookingRequestLocally(bookingRequest) {
+  return await writeBookingRequestToSource(bookingRequest);
 }
 
 function getLastBookingRequest() {
@@ -2243,7 +2271,7 @@ function renderLastBookingRequestCard() {
   `;
 }
 
-function validateAndSubmitBooking() {
+async function validateAndSubmitBooking() {
   const tBooking = getBookingTexts(currentLang);
 
   bookingForm.name = (bookingForm.name || '').trim();

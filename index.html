@@ -1936,10 +1936,37 @@ function getLastBookingRequest() {
   }
 }
 
-function updateStoredBookingRequest(updatedRequest) {
+async function updateStoredBookingRequest(updatedRequest) {
   if (!updatedRequest || !updatedRequest.requestId) return null;
 
-  const existingRequests = readBookingRequestsFromStorage();
+  if (LIVE_REQUESTS_ENABLED && updatedRequest.liveRequestId) {
+    try {
+      const { error } = await supabaseClient
+        .from('requests')
+        .update({
+          client_name: updatedRequest?.customer?.name || '',
+          client_phone: updatedRequest?.customer?.phone || '',
+          client_language: updatedRequest?.customer?.language || currentLang || 'fr',
+          booking_date: updatedRequest?.booking?.date || '',
+          booking_time: updatedRequest?.booking?.time || '',
+          party_size: Number(updatedRequest?.booking?.people || 1),
+          items: normalizeRequestItems(updatedRequest?.booking?.preorderItems || []),
+          note: updatedRequest?.booking?.note || '',
+          status: updatedRequest?.status || 'pending'
+        })
+        .eq('id', updatedRequest.liveRequestId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Supabase booking update error:', error);
+      return null;
+    }
+
+    localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
+    return updatedRequest;
+  }
+
+  const existingRequests = await readBookingRequestsFromStorage();
   const updatedRequests = existingRequests.map((request) =>
     request && request.requestId === updatedRequest.requestId ? updatedRequest : request
   );

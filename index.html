@@ -2841,7 +2841,11 @@ function startClientRequestAutoRefresh() {
   if (!orderMode && !bookingMode) return;
   if (!hasPendingClientOrderRequest() && !hasPendingClientBookingRequest()) return;
 
-  clientRequestAutoRefreshTimer = setInterval(() => {
+  clientRequestAutoRefreshTimer = setInterval(async () => {
+    if (bookingMode && typeof readBookingRequestsFromStorage === 'function') {
+      bookingRequests = await readBookingRequestsFromStorage();
+    }
+
     refreshClientRequestCards();
   }, 30000);
 }

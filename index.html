@@ -2375,8 +2375,9 @@ async function validateAndSubmitBooking() {
 
   bookingForm.phone = normalizedPhone;
 
+  const existingBookingRequests = await readBookingRequestsFromStorage();
   const existingBookingRequest = editingBookingRequestId
-    ? readBookingRequestsFromStorage().find((request) => request && request.requestId === editingBookingRequestId)
+    ? existingBookingRequests.find((request) => request && request.requestId === editingBookingRequestId)
     : null;
 
   const bookingRequest = buildBookingRequest();

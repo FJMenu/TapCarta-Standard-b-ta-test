@@ -2147,7 +2147,11 @@ function renderLastBookingRequestCard() {
 
 
 
-      ${['pending', 'processing'].includes(status) ? renderClientRequestRefreshPanel() : ''}
+            ${['pending', 'processing'].includes(status) ? renderClientRequestRefreshPanel() : ''}
+
+       ${['sent', 'processing'].includes(orderRequest.status || 'sent') ? renderClientRequestRefreshPanel() : ''}
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingName} :</span> ${escapeBookingHtml(bookingRequest.customer.name || '-')}</div>

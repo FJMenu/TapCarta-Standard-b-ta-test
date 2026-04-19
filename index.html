@@ -2819,7 +2819,11 @@ function refreshClientRequestCards() {
   }
 }
 
-window.manualRefreshClientRequests = function() {
+window.manualRefreshClientRequests = async function() {
+  if (typeof readBookingRequestsFromStorage === 'function') {
+    bookingRequests = await readBookingRequestsFromStorage();
+  }
+
   refreshClientRequestCards();
 };
 

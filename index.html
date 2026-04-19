@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.22';
+    const APP_VERSION = 'V1.0.23';
 
     function getBasePath() {
       const path = window.location.pathname;
@@ -2147,6 +2147,8 @@ function renderLastBookingRequestCard() {
 
 
 
+      ${['pending', 'processing'].includes(status) ? renderClientRequestRefreshPanel() : ''}
+
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingName} :</span> ${escapeBookingHtml(bookingRequest.customer.name || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingPhone} :</span> ${escapeBookingHtml(bookingRequest.customer.phone || '-')}</div>
@@ -2449,6 +2451,146 @@ function getOrderStatusLabel(status) {
 
   const langLabels = labels[currentLang] || labels.fr;
   return langLabels[status] || langLabels.sent;
+}
+
+function renderLastOrderRequestCard() {
+  const orderRequest = getLastOrderRequest();
+
+  if (!orderRequest || !orderRequest.order || !orderRequest.customer) {
+    return '';
+  }
+
+  const cardTexts = {
+    fr: {
+      title: 'Suivi de votre commande',
+      status: 'Statut',
+      reference: 'Référence',
+      name: 'Nom',
+      phone: 'Téléphone',
+      date: 'Date',
+      time: 'Heure',
+      updatedAt: 'Dernière mise à jour',
+      note: 'Remarque',
+      items: 'Articles',
+      refusalReason: 'Motif du refus',
+      waiting: 'Votre commande a bien été transmise. La réponse du restaurant apparaîtra ici.',
+      processing: 'Le restaurant a consulté votre commande et la traite actuellement.',
+      confirmed: 'Le restaurant a confirmé votre commande.',
+      refused: 'Le restaurant a refusé votre commande.'
+    },
+    es: {
+      title: 'Seguimiento de tu pedido',
+      status: 'Estado',
+      reference: 'Referencia',
+      name: 'Nombre',
+      phone: 'Teléfono',
+      date: 'Fecha',
+      time: 'Hora',
+      updatedAt: 'Última actualización',
+      note: 'Observación',
+      items: 'Artículos',
+      refusalReason: 'Motivo del rechazo',
+      waiting: 'Tu pedido ha sido transmitido correctamente. La respuesta del restaurante aparecerá aquí.',
+      processing: 'El restaurante ha consultado tu pedido y lo está gestionando.',
+      confirmed: 'El restaurante ha confirmado tu pedido.',
+      refused: 'El restaurante ha rechazado tu pedido.'
+    },
+    en: {
+      title: 'Your order tracking',
+      status: 'Status',
+      reference: 'Reference',
+      name: 'Name',
+      phone: 'Phone',
+      date: 'Date',
+      time: 'Time',
+      updatedAt: 'Last update',
+      note: 'Note',
+      items: 'Items',
+      refusalReason: 'Reason for refusal',
+      waiting: 'Your order has been transmitted. The restaurant response will appear here.',
+      processing: 'The restaurant has opened your order and is currently processing it.',
+      confirmed: 'The restaurant has confirmed your order.',
+      refused: 'The restaurant has refused your order.'
+    },
+    nl: {
+      title: 'Opvolging van je bestelling',
+      status: 'Status',
+      reference: 'Referentie',
+      name: 'Naam',
+      phone: 'Telefoon',
+      date: 'Datum',
+      time: 'Uur',
+      updatedAt: 'Laatste update',
+      note: 'Opmerking',
+      items: 'Artikelen',
+      refusalReason: 'Reden van weigering',
+      waiting: 'Je bestelling is goed doorgestuurd. Het antwoord van het restaurant verschijnt hier.',
+      processing: 'Het restaurant heeft je bestelling geopend en verwerkt ze momenteel.',
+      confirmed: 'Het restaurant heeft je bestelling bevestigd.',
+      refused: 'Het restaurant heeft je bestelling geweigerd.'
+    }
+  };
+
+  const texts = cardTexts[currentLang] || cardTexts.fr;
+  const orderItems = Array.isArray(orderRequest.order.items) ? orderRequest.order.items : [];
+  const responseMessageByStatus = {
+    sent: texts.waiting,
+    processing: texts.processing,
+    confirmed: texts.confirmed,
+    refused: texts.refused
+  };
+
+  return `
+    <div id="client-order-card" class="mt-4 rounded-2xl border border-gold/30 bg-black/20 p-4">
+      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gold/85">
+            ${texts.title}
+          </div>
+          <div class="mt-2 text-sm text-cream/90">
+            <span class="font-semibold text-gold/90">${texts.status} :</span>
+            ${escapeBookingHtml(getOrderStatusLabel(orderRequest.status || 'sent'))}
+          </div>
+        </div>
+      </div>
+
+      ${['sent', 'processing'].includes(orderRequest.status || 'sent') ? renderClientRequestRefreshPanel() : ''}
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
+        <div><span class="text-gold/85 font-semibold">${texts.reference} :</span> ${escapeBookingHtml(orderRequest.requestId || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${texts.updatedAt} :</span> ${escapeBookingHtml(formatBookingDateTimeForDisplay(orderRequest.updatedAt || orderRequest.createdAt || ''))}</div>
+        <div><span class="text-gold/85 font-semibold">${texts.name} :</span> ${escapeBookingHtml(orderRequest.customer.name || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${texts.phone} :</span> ${escapeBookingHtml(orderRequest.customer.phone || '-')}</div>
+        <div><span class="text-gold/85 font-semibold">${texts.date} :</span> ${escapeBookingHtml(formatBookingDateForDisplay(orderRequest.order.date || ''))}</div>
+        <div><span class="text-gold/85 font-semibold">${texts.time} :</span> ${escapeBookingHtml(orderRequest.order.time || '-')}</div>
+      </div>
+
+      <div class="mt-3 rounded-xl border border-gold/15 bg-black/15 px-3 py-3 text-sm text-cream/80">
+        ${escapeBookingHtml(responseMessageByStatus[orderRequest.status || 'sent'] || texts.waiting)}
+      </div>
+
+      ${orderRequest.order.note ? `
+        <div class="mt-3 text-sm text-cream/80">
+          <span class="text-gold/85 font-semibold">${texts.note} :</span>
+          ${escapeBookingHtml(orderRequest.order.note)}
+        </div>
+      ` : ''}
+
+      ${orderItems.length ? `
+        <div class="mt-3 text-sm text-cream/80">
+          <span class="text-gold/85 font-semibold">${texts.items} :</span>
+          ${escapeBookingHtml(orderItems.map((item) => `${item.name} x${item.quantity}`).join(', '))}
+        </div>
+      ` : ''}
+
+      ${orderRequest.status === 'refused' && orderRequest.restaurantResponse?.reason ? `
+        <div class="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-3 text-sm text-cream/90">
+          <span class="text-red-200 font-semibold">${texts.refusalReason} :</span>
+          ${escapeBookingHtml(orderRequest.restaurantResponse.reason)}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 let clientRequestAutoRefreshTimer = null;
@@ -3264,7 +3406,9 @@ ${orderMode ? `
   ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
-      ${renderLastOrderRequestCard()}
+      <div id="client-order-card-slot">
+        ${renderLastOrderRequestCard()}
+      </div>
     </div>
   </div>
 ` : ''}
@@ -3284,7 +3428,9 @@ ${bookingMode ? `
 </button>
       </div>
 
-      ${renderLastBookingRequestCard()}
+      <div id="client-booking-card-slot">
+        ${renderLastBookingRequestCard()}
+      </div>
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
@@ -3861,6 +4007,7 @@ ${!orderMode ? `
 
       updateInstallUI();
       updateLangButtons();
+      setupClientRequestAutoRefresh();
     }
 
  function ensureFreshHtmlVersion() {
@@ -3958,6 +4105,30 @@ if (faviconLink) {
   }
 
   renderMenu();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopClientRequestAutoRefresh();
+      return;
+    }
+
+    refreshClientRequestCards();
+    startClientRequestAutoRefresh();
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (!event.key) return;
+
+    if (
+      event.key === getOrderStorageKey() ||
+      event.key === getLastOrderStorageKey() ||
+      event.key === getBookingStorageKey() ||
+      event.key === getLastBookingStorageKey()
+    ) {
+      refreshClientRequestCards();
+      startClientRequestAutoRefresh();
+    }
+  });
 
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {

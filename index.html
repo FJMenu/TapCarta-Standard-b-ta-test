@@ -2451,6 +2451,106 @@ function getOrderStatusLabel(status) {
   return langLabels[status] || langLabels.sent;
 }
 
+let clientRequestAutoRefreshTimer = null;
+
+function getClientRequestRefreshTexts() {
+  const texts = {
+    fr: {
+      info: 'Mise à jour automatique toutes les 30 secondes.',
+      button: 'Actualiser'
+    },
+    es: {
+      info: 'Actualización automática cada 30 segundos.',
+      button: 'Actualizar'
+    },
+    en: {
+      info: 'Automatic refresh every 30 seconds.',
+      button: 'Refresh'
+    },
+    nl: {
+      info: 'Automatische vernieuwing elke 30 seconden.',
+      button: 'Vernieuwen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function hasPendingClientBookingRequest() {
+  const bookingRequest = getLastBookingRequest();
+  if (!bookingRequest) return false;
+  return ['pending', 'processing'].includes(bookingRequest.status || 'pending');
+}
+
+function hasPendingClientOrderRequest() {
+  const orderRequest = getLastOrderRequest();
+  if (!orderRequest) return false;
+  return ['sent', 'processing'].includes(orderRequest.status || 'sent');
+}
+
+function renderClientRequestRefreshPanel() {
+  const tRefresh = getClientRequestRefreshTexts();
+
+  return `
+    <div class="mt-4 flex flex-col gap-3 rounded-xl border border-gold/20 bg-black/15 px-3 py-3 md:flex-row md:items-center md:justify-between">
+      <div class="text-xs text-cream/70">
+        ${tRefresh.info}
+      </div>
+      <button onclick="manualRefreshClientRequests()" class="btn-action inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gold/35 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
+        <i data-lucide="refresh-cw" class="w-4 h-4 text-gold"></i>
+        <span>${tRefresh.button}</span>
+      </button>
+    </div>
+  `;
+}
+
+function refreshClientRequestCards() {
+  const orderSlot = document.getElementById('client-order-card-slot');
+  const bookingSlot = document.getElementById('client-booking-card-slot');
+
+  if (orderSlot && typeof renderLastOrderRequestCard === 'function') {
+    orderSlot.innerHTML = renderLastOrderRequestCard();
+  }
+
+  if (bookingSlot) {
+    bookingSlot.innerHTML = renderLastBookingRequestCard();
+  }
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+window.manualRefreshClientRequests = function() {
+  refreshClientRequestCards();
+};
+
+function stopClientRequestAutoRefresh() {
+  if (clientRequestAutoRefreshTimer) {
+    clearInterval(clientRequestAutoRefreshTimer);
+    clientRequestAutoRefreshTimer = null;
+  }
+}
+
+function startClientRequestAutoRefresh() {
+  stopClientRequestAutoRefresh();
+
+  if (document.hidden) return;
+  if (!orderMode && !bookingMode) return;
+  if (!hasPendingClientOrderRequest() && !hasPendingClientBookingRequest()) return;
+
+  clientRequestAutoRefreshTimer = setInterval(() => {
+    refreshClientRequestCards();
+  }, 30000);
+}
+
+function setupClientRequestAutoRefresh() {
+  refreshClientRequestCards();
+  startClientRequestAutoRefresh();
+}
+
 function deactivateBookingMode() {
   bookingMode = false;
   orderMode = false;

@@ -8,7 +8,7 @@
   <script>
     const APP_VERSION = 'V1.0.24';
 const LIVE_REQUESTS_ENABLED = true;
-const LIVE_RESTAURANT_ID = 'tapcarta-demo';
+let LIVE_RESTAURANT_ID = 'tapcarta-demo';
 
 function normalizeRequestItems(items) {
   if (!Array.isArray(items)) return [];
@@ -831,6 +831,11 @@ async function loadRestaurantData() {
   }
 
   const restaurantData = await response.json();
+
+  if (restaurantData?.identity?.id) {
+    siteConfig.identity.id = restaurantData.identity.id;
+    LIVE_RESTAURANT_ID = restaurantData.identity.id;
+  }
 
   if (restaurantData?.identity?.name) {
     siteConfig.restaurantName = restaurantData.identity.name;

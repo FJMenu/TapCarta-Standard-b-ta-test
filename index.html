@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.24';
+    const APP_VERSION = 'V1.0.25';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = 'tapcarta-demo';
 
@@ -1910,9 +1910,29 @@ async function readBookingRequestsFromStorage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return Array.isArray(data)
+
+      const liveRequests = Array.isArray(data)
         ? data.map(mapLiveBookingRowToRequest).filter(Boolean)
         : [];
+
+      try {
+        const rawLastBooking = localStorage.getItem(getLastBookingStorageKey());
+        const parsedLastBooking = rawLastBooking ? JSON.parse(rawLastBooking) : null;
+        const liveRequestId = parsedLastBooking?.liveRequestId || parsedLastBooking?.requestId || null;
+
+        if (liveRequestId) {
+          const liveRow = await fetchLiveRequestById(liveRequestId);
+          const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
+
+          if (syncedLastBooking) {
+            localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(syncedLastBooking));
+          }
+        }
+      } catch (syncError) {
+        console.error('Supabase booking sync error:', syncError);
+      }
+
+      return liveRequests;
     } catch (error) {
       console.error('Supabase booking read error:', error);
       return [];

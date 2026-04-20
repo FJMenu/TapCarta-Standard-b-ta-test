@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.26';
+    const APP_VERSION = 'V1.0.27';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -856,6 +856,12 @@ async function loadRestaurantData() {
     googleReviews: restaurantData?.modules?.googleReviews !== false,
     whatsapp: restaurantData?.modules?.whatsapp !== false
   };
+
+  if (!siteConfig.modules.ordering && orderMode) {
+    orderMode = false;
+    cartPanelOpen = false;
+    orderReviewOpen = false;
+  }
 
   if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
     supportedLangs.length = 0;
@@ -3788,7 +3794,7 @@ ${bookingMode ? `
       ${siteConfig.modules?.booking ? `
       <button onclick="activateBookingMode()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="calendar-days" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">Réserver</span>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.bookingButton}</span>
       </button>
       ` : ''}
 

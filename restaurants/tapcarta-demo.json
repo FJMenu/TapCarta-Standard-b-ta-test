@@ -13,7 +13,7 @@
   },
   "modules": {
     "web": false,
-    "ordering": true,
+    "ordering": false,
     "booking": true,
     "preorderIndicative": false,
     "googleReviews": true,

@@ -801,17 +801,21 @@ function mapAdminItems(items) {
   if (!Array.isArray(items)) return [];
 
   return items
-    .filter(item => item && item.visible !== false)
-    .sort((a, b) => (a.order || 9999) - (b.order || 9999))
     .map((item, index) => ({
-      id: item.id || `item-${index + 1}`,
-      price: formatAdminPrice(item.price),
-      adminName: item.name || '',
-      adminSubtitle: item.subtitle || '',
-      visible: item.visible !== false,
-      available: item.available !== false,
-      order: Number.isFinite(item.order) ? item.order : 9999,
-      updatedAt: item.updatedAt || null
+      rawItem: item,
+      fallbackIndex: index
+    }))
+    .filter(({ rawItem }) => rawItem && rawItem.visible !== false)
+    .sort((a, b) => ((a.rawItem.order || 9999) - (b.rawItem.order || 9999)))
+    .map(({ rawItem, fallbackIndex }) => ({
+      id: rawItem.id || `item-${fallbackIndex + 1}`,
+      price: formatAdminPrice(rawItem.price),
+      adminName: rawItem.name || '',
+      adminSubtitle: rawItem.subtitle || '',
+      visible: rawItem.visible !== false,
+      available: rawItem.available !== false,
+      order: Number.isFinite(rawItem.order) ? rawItem.order : 9999,
+      updatedAt: rawItem.updatedAt || null
     }));
 }
 

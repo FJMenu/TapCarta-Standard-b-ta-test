@@ -2845,6 +2845,7 @@ function renderLastOrderRequestCard() {
 }
 
 let clientRequestAutoRefreshTimer = null;
+let clientMenuAutoRefreshTimer = null;
 
 function getClientRequestRefreshTexts() {
   const texts = {
@@ -2926,10 +2927,33 @@ window.manualRefreshClientRequests = async function() {
   refreshClientRequestCards();
 };
 
+async function fetchLiveMenuMeta() {
+  if (!LIVE_RESTAURANT_ID) return null;
+
+  const { data, error } = await supabaseClient
+    .from('restaurant_menus')
+    .select('menu_version, updated_at')
+    .eq('restaurant_id', LIVE_RESTAURANT_ID)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 function stopClientRequestAutoRefresh() {
   if (clientRequestAutoRefreshTimer) {
     clearInterval(clientRequestAutoRefreshTimer);
     clientRequestAutoRefreshTimer = null;
+  }
+}
+
+function stopClientMenuAutoRefresh() {
+  if (clientMenuAutoRefreshTimer) {
+    clearInterval(clientMenuAutoRefreshTimer);
+    clientMenuAutoRefreshTimer = null;
   }
 }
 
@@ -2953,9 +2977,46 @@ function startClientRequestAutoRefresh() {
   }, 30000);
 }
 
+function startClientMenuAutoRefresh() {
+  stopClientMenuAutoRefresh();
+
+  if (document.hidden) return;
+  if (!LIVE_RESTAURANT_ID) return;
+
+  clientMenuAutoRefreshTimer = setInterval(async () => {
+    try {
+      const liveMenuMeta = await fetchLiveMenuMeta();
+      if (!liveMenuMeta) return;
+
+      const nextMenuVersion = liveMenuMeta.menu_version ?? null;
+      const nextUpdatedAt = liveMenuMeta.updated_at ?? null;
+
+      const versionChanged = String(nextMenuVersion ?? '') !== String(menuMeta.menuVersion ?? '');
+      const updatedAtChanged = String(nextUpdatedAt ?? '') !== String(menuMeta.updatedAt ?? '');
+
+      if (!versionChanged && !updatedAtChanged) {
+        return;
+      }
+
+      const currentScrollY = window.scrollY;
+
+      await loadRestaurantData();
+      renderMenu();
+      refreshClientRequestCards();
+
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: currentScrollY, behavior: 'auto' });
+      });
+    } catch (error) {
+      console.error('Erreur refresh menu live client :', error);
+    }
+  }, 30000);
+}
+
 function setupClientRequestAutoRefresh() {
   refreshClientRequestCards();
   startClientRequestAutoRefresh();
+  startClientMenuAutoRefresh();
 }
 
 function deactivateBookingMode() {

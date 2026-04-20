@@ -41,6 +41,14 @@ async function fetchLiveRequestById(requestId) {
   if (error) throw error;
   return data;
 }
+
+async function fetchLiveRequestsByType(requestType) {
+  if (requestType === 'booking') {
+    return await readBookingRequestsFromStorage();
+  }
+
+  return [];
+}
 function mapLiveBookingRowToRequest(row) {
   if (!row) return null;
 
@@ -3043,7 +3051,12 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
       nl: 'Voorbeeld: +34612345678'
     };
 
-    alert(`${tBooking.bookingInvalidPhoneAlert}\n${phoneExampleByLang[currentLang] || phoneExampleByLang.fr}`);
+    alert(({
+  fr: `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`,
+  es: `Por favor, indique un número de teléfono válido.\n${phoneExampleByLang.es}`,
+  en: `Please enter a valid phone number.\n${phoneExampleByLang.en}`,
+  nl: `Geef een geldig telefoonnummer op.\n${phoneExampleByLang.nl}`
+})[currentLang] || `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`);
     renderMenu();
     return;
   }

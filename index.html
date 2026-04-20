@@ -849,12 +849,19 @@ async function loadRestaurantData() {
     siteConfig.restaurantName = restaurantData.identity.name;
   }
 
+  const restaurantLifecycle =
+    restaurantData?.status?.lifecycle ||
+    restaurantData?.identity?.status ||
+    'active';
+
+  const isRestaurantActive = restaurantLifecycle === 'active';
+
   siteConfig.modules = {
-    ordering: restaurantData?.modules?.ordering !== false,
-    booking: restaurantData?.modules?.booking !== false,
-    preorderIndicative: restaurantData?.modules?.preorderIndicative !== false,
-    googleReviews: restaurantData?.modules?.googleReviews !== false,
-    whatsapp: restaurantData?.modules?.whatsapp !== false
+    ordering: isRestaurantActive && restaurantData?.modules?.ordering !== false,
+    booking: isRestaurantActive && restaurantData?.modules?.booking !== false,
+    preorderIndicative: isRestaurantActive && restaurantData?.modules?.preorderIndicative !== false,
+    googleReviews: isRestaurantActive && restaurantData?.modules?.googleReviews !== false,
+    whatsapp: isRestaurantActive && restaurantData?.modules?.whatsapp !== false
   };
 
   if (!siteConfig.modules.ordering && orderMode) {

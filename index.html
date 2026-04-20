@@ -849,6 +849,38 @@ async function loadRestaurantData() {
     siteConfig.restaurantName = restaurantData.identity.name;
   }
 
+  if (LIVE_RESTAURANT_ID) {
+    try {
+      const { data: liveMenuRow, error: liveMenuError } = await supabaseClient
+        .from('restaurant_menus')
+        .select('menu_json, menu_version, updated_at')
+        .eq('restaurant_id', LIVE_RESTAURANT_ID)
+        .maybeSingle();
+
+      if (liveMenuError) {
+        throw liveMenuError;
+      }
+
+      if (liveMenuRow?.menu_json && typeof liveMenuRow.menu_json === 'object') {
+        restaurantData.menu = {
+          ...liveMenuRow.menu_json,
+          menuVersion:
+            liveMenuRow.menu_version ??
+            liveMenuRow.menu_json?.menuVersion ??
+            restaurantData?.menu?.menuVersion ??
+            null,
+          updatedAt:
+            liveMenuRow.updated_at ??
+            liveMenuRow.menu_json?.updatedAt ??
+            restaurantData?.menu?.updatedAt ??
+            null
+        };
+      }
+    } catch (error) {
+      console.error('Erreur lecture menu live Supabase :', error);
+    }
+  }
+
   const restaurantLifecycle =
     restaurantData?.status?.lifecycle ||
     restaurantData?.identity?.status ||

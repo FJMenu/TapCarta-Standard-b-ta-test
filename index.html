@@ -863,9 +863,13 @@ async function loadRestaurantData() {
     orderReviewOpen = false;
   }
 
-  if (Array.isArray(restaurantData?.identity?.languages) && restaurantData.identity.languages.length > 0) {
+  const activeLanguages = Array.isArray(restaurantData?.languages?.active)
+    ? restaurantData.languages.active
+    : (Array.isArray(restaurantData?.identity?.languages) ? restaurantData.identity.languages : []);
+
+  if (activeLanguages.length > 0) {
     supportedLangs.length = 0;
-    restaurantData.identity.languages.forEach(lang => {
+    activeLanguages.forEach(lang => {
       if (translations[lang]) supportedLangs.push(lang);
     });
 

@@ -8,7 +8,7 @@
   <script>
     const APP_VERSION = 'V1.0.26';
 const LIVE_REQUESTS_ENABLED = true;
-let LIVE_RESTAURANT_ID = 'tapcarta-demo';
+let LIVE_RESTAURANT_ID = '';
 
 function normalizeRequestItems(items) {
   if (!Array.isArray(items)) return [];
@@ -2742,7 +2742,7 @@ function renderLastOrderRequestCard() {
         </div>
       </div>
 
-      ${['sent', 'processing'].includes(orderRequest.status || 'sent') ? renderClientRequestRefreshPanel() : ''}
+      ${''}
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
         <div><span class="text-gold/85 font-semibold">${texts.reference} :</span> ${escapeBookingHtml(orderRequest.requestId || '-')}</div>
@@ -2854,7 +2854,9 @@ function refreshClientRequestCards() {
 }
 
 window.manualRefreshClientRequests = async function() {
-  if (typeof readBookingRequestsFromStorage === 'function') {
+  if (LIVE_REQUESTS_ENABLED) {
+    bookingRequests = await fetchLiveRequestsByType('booking');
+  } else if (typeof readBookingRequestsFromStorage === 'function') {
     bookingRequests = await readBookingRequestsFromStorage();
   }
 
@@ -2873,11 +2875,15 @@ function startClientRequestAutoRefresh() {
 
   if (document.hidden) return;
   if (!orderMode && !bookingMode) return;
-  if (!hasPendingClientOrderRequest() && !hasPendingClientBookingRequest()) return;
+  if (!hasPendingClientBookingRequest()) return;
 
   clientRequestAutoRefreshTimer = setInterval(async () => {
-    if (bookingMode && typeof readBookingRequestsFromStorage === 'function') {
-      bookingRequests = await readBookingRequestsFromStorage();
+    if (bookingMode) {
+      bookingRequests = LIVE_REQUESTS_ENABLED
+        ? await fetchLiveRequestsByType('booking')
+        : (typeof readBookingRequestsFromStorage === 'function'
+            ? await readBookingRequestsFromStorage()
+            : bookingRequests);
     }
 
     refreshClientRequestCards();

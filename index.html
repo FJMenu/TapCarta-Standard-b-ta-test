@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>La Bonne Fourchette</title>
+  <title>TapCarta Demo</title>
 
   <script>
     const APP_VERSION = 'V1.0.27';
@@ -749,7 +749,7 @@ let siteConfig = {
   logoUrl: "https://i.postimg.cc/bN0b11bS/logo-sans-fond.png",
   brandLogoUrl: "https://i.postimg.cc/sX7n1G14/Chat-GPT-Image-14-fevr-2026-15-23-38.png",
   productName: "TapCarta",
-  productSignature: "Created by FJ",
+  productSignature: "Created by TapCarta",
   reviewUrl: "https://search.google.com/local/writereview?placeid=ChIJ3b0pGDb7wEcRs2VnXGk2mmE",
   desktopCollageUrl: "liege-collage.jpg",
   restaurantName: "TapCarta Demo",
@@ -4173,36 +4173,24 @@ ${!orderMode ? `
           href="https://tapcarta.com?lang=${currentLang}"
           target="_blank"
           rel="noopener noreferrer"
-          class="brand-card flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border-2 border-gold/40 shadow-lg hover:bg-white/10 hover:border-gold/60 transition-all duration-300 cursor-pointer"
+          class="brand-card flex flex-col items-center gap-3 px-5 py-4 rounded-2xl bg-white/5 border-2 border-gold/40 shadow-lg hover:bg-white/10 hover:border-gold/60 transition-all duration-300 cursor-pointer"
           title="${t.discoverTapCarta}"
           aria-label="${t.discoverTapCarta}"
         >
-          <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold/30 bg-white">
-            <img
-              src="${siteConfig.brandLogoUrl}"
-              alt="FJ"
-              class="w-full h-full object-contain"
-              loading="lazy"
-              decoding="async"
-            >
+          <img
+            src="./tapcarta-created-by.png"
+            alt="TapCarta"
+            class="h-20 w-auto object-contain"
+            loading="lazy"
+            decoding="async"
+          >
+
+          <div class="text-xs text-cream/60 text-center">
+            ${t.discoverTapCarta}
           </div>
 
-          <div class="leading-tight text-left min-w-0">
-            <div class="text-base font-semibold text-cream tracking-wide break-words">
-              ${siteConfig.productName}
-            </div>
-
-            <div class="text-sm text-gold/80 mt-1 break-words">
-              ${siteConfig.productSignature}
-            </div>
-
-            <div class="text-xs text-cream/60 mt-2">
-              ${t.discoverTapCarta}
-            </div>
-
-            <div class="text-xs text-cream/40 mt-2">
-              ${t.versionLabel} ${APP_VERSION}
-            </div>
+          <div class="text-xs text-cream/40 text-center">
+            ${t.versionLabel} ${APP_VERSION}
           </div>
         </a>
       </div>

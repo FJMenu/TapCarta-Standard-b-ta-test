@@ -3478,7 +3478,6 @@ function renderMenuItem(item, t) {
   const itemSubtitle = item.adminSubtitle || itemData.subtitle || '';
   const isAvailable = item.available !== false;
 
-  if (!isAvailable) return '';
   if (!itemTitle && !item.price && !item.noPrice && !item.specialPriceText) return '';
 
   let priceDisplay = '';
@@ -3486,24 +3485,39 @@ function renderMenuItem(item, t) {
   if (item.noPrice) {
     priceDisplay = '';
   } else if (item.price) {
-    priceDisplay = `<span class="text-sm font-semibold text-gold ml-4 whitespace-nowrap">${item.price}</span>`;
+    priceDisplay = `<span class="text-sm font-semibold ${isAvailable ? 'text-gold' : 'text-cream/45'} ml-4 whitespace-nowrap">${item.price}</span>`;
   } else {
-    priceDisplay = `<span class="text-sm font-semibold text-gold ml-4 whitespace-nowrap">${t[item.specialPriceText]}</span>`;
+    priceDisplay = `<span class="text-sm font-semibold ${isAvailable ? 'text-gold' : 'text-cream/45'} ml-4 whitespace-nowrap">${t[item.specialPriceText]}</span>`;
   }
 
-  const actionButton = orderMode && !item.noPrice
+  const unavailableLabel =
+    currentLang === 'es'
+      ? 'Indisponible'
+      : currentLang === 'en'
+        ? 'Unavailable'
+        : currentLang === 'nl'
+          ? 'Niet beschikbaar'
+          : 'Indisponible';
+
+  const actionButton = orderMode && !item.noPrice && isAvailable
     ? `
       <button onclick="addToCart('${item.id}')" class="btn-action ml-3 px-3 py-1.5 rounded-lg border border-gold/50 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
         ${t.addButton}
       </button>
     `
-    : '';
+    : !isAvailable
+      ? `
+        <span class="ml-3 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-semibold text-cream/55 bg-white/5 whitespace-nowrap">
+          ${unavailableLabel}
+        </span>
+      `
+      : '';
 
   return `
-    <div class="menu-item-row flex justify-between items-center py-2.5 px-3 rounded-lg">
+    <div class="menu-item-row flex justify-between items-center py-2.5 px-3 rounded-lg ${isAvailable ? '' : 'opacity-60'}">
       <div class="flex-1 min-w-0">
-        <span class="text-sm text-cream/90">${itemTitle}</span>
-        ${itemSubtitle ? `<div class="menu-item-subtitle">${itemSubtitle}</div>` : ''}
+        <span class="text-sm ${isAvailable ? 'text-cream/90' : 'text-cream/60'}">${itemTitle}</span>
+        ${itemSubtitle ? `<div class="menu-item-subtitle ${isAvailable ? '' : '!text-cream/40'}">${itemSubtitle}</div>` : ''}
       </div>
       <div class="flex items-center ml-4">
         ${priceDisplay}
@@ -3523,7 +3537,7 @@ function renderCategory(categoryKey, categoryLabel, t) {
       if (categoryMeta.visible === false) return '';
 
       const items = (menuData[categoryKey] || []).filter(
-        item => item && item.visible !== false && item.available !== false
+        item => item && item.visible !== false
       );
 
       const icon = categoryIcons[categoryKey] || 'utensils-crossed';

@@ -2468,8 +2468,10 @@ async function validateAndSubmitBooking() {
 function activateOrderMode() {
   if (!siteConfig.modules?.ordering) {
     orderMode = false;
+    bookingMode = false;
     cartPanelOpen = false;
     orderReviewOpen = false;
+    renderApp();
     return;
   }
 
@@ -2656,6 +2658,10 @@ function getOrderStatusLabel(status) {
 }
 
 function renderLastOrderRequestCard() {
+  if (!siteConfig.modules?.ordering) {
+    return '';
+  }
+
   const orderRequest = getLastOrderRequest();
 
   if (!orderRequest || !orderRequest.order || !orderRequest.customer) {

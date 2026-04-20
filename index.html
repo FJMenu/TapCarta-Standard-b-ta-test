@@ -6,7 +6,7 @@
   <title>La Bonne Fourchette</title>
 
   <script>
-    const APP_VERSION = 'V1.0.25';
+    const APP_VERSION = 'V1.0.26';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = 'tapcarta-demo';
 
@@ -1437,7 +1437,7 @@ bookingEditingSubmit: 'Mettre à jour la réservation'
       bookingPreorderPlaceholder: 'Ej. 2 croquetas, 1 camembert frito',
       bookingPreorderHelp: 'Indicación opcional para ayudar al restaurante a anticipar su mise en place. No es un pedido firme.',
 bookingSubmit: 'Enviar la reserva',
-bookingPendingAlert: 'Envío de reserva por conectar',
+bookingPendingAlert: 'Su solicitud de reserva ha sido enviada y está pendiente de confirmación del restaurante.',
 bookingUpdatedAlert: 'Su solicitud de reserva ha sido actualizada. Sigue pendiente de confirmación del restaurante.',
 bookingUpdatedAtLabel: 'Última actualización',
 bookingRequiredAlert: 'Por favor, complete todos los campos obligatorios.',
@@ -1473,7 +1473,7 @@ bookingEditingSubmit: 'Actualizar la reserva'
       bookingPreorderPlaceholder: 'E.g. 2 cheese croquettes, 1 fried camembert',
       bookingPreorderHelp: 'Optional indication to help the restaurant anticipate preparation. This is not a firm order.',
   bookingSubmit: 'Send reservation',
-bookingPendingAlert: 'Reservation sending to be connected',
+bookingPendingAlert: 'Your reservation request has been sent and is pending restaurant confirmation.',
 bookingUpdatedAlert: 'Your reservation request has been updated. It is still pending restaurant confirmation.',
 bookingUpdatedAtLabel: 'Last update',
 bookingRequiredAlert: 'Please complete all required fields.',
@@ -1509,7 +1509,7 @@ bookingEditingSubmit: 'Update reservation'
       bookingPreorderPlaceholder: 'Bv. 2 kaaskroketten, 1 gefrituurde camembert',
       bookingPreorderHelp: 'Optionele indicatie om het restaurant te helpen bij de voorbereiding. Dit is geen vaste bestelling.',
 bookingSubmit: 'Reservatie versturen',
-bookingPendingAlert: 'Verzenden van reservatie nog te koppelen',
+bookingPendingAlert: 'Uw reservatieaanvraag werd verzonden en wacht op bevestiging door het restaurant.',
 bookingUpdatedAlert: 'Uw reservatieaanvraag werd bijgewerkt. Ze blijft in afwachting van bevestiging door het restaurant.',
 bookingUpdatedAtLabel: 'Laatste update',
 bookingRequiredAlert: 'Vul alle verplichte velden in.',
@@ -2387,20 +2387,27 @@ async function validateAndSubmitBooking() {
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
   if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    alert(`${t.orderFormPhone}\n\nVeuillez entrer un numéro de téléphone valide.\nExemple : +34612345678`);
+    alert(`${tBooking.bookingInvalidPhoneAlert}\n${phoneExampleByLang[currentLang] || phoneExampleByLang.fr}`);
     renderMenu();
     return;
   }
 
   if (Number(bookingForm.people) < 1) {
-    alert('Le nombre de personnes doit être au minimum de 1.');
+    alert(({
+  fr: 'Le nombre de personnes doit être au minimum de 1.',
+  es: 'El número de personas debe ser como mínimo 1.',
+  en: 'The number of guests must be at least 1.',
+  nl: 'Het aantal personen moet minstens 1 zijn.'
+})[currentLang] || 'Le nombre de personnes doit être au minimum de 1.');
     renderMenu();
     return;
   }
 
   bookingForm.phone = normalizedPhone;
 
-  const existingBookingRequests = await readBookingRequestsFromStorage();
+  const existingBookingRequests = LIVE_REQUESTS_ENABLED
+  ? await fetchLiveRequestsByType('booking')
+  : await readBookingRequestsFromStorage();
   const existingBookingRequest = editingBookingRequestId
     ? existingBookingRequests.find((request) => request && request.requestId === editingBookingRequestId)
     : null;
@@ -2419,7 +2426,9 @@ async function validateAndSubmitBooking() {
 
   if (existingBookingRequest) {
     await updateStoredBookingRequest(bookingRequest);
-    bookingRequests = await readBookingRequestsFromStorage();
+    bookingRequests = LIVE_REQUESTS_ENABLED
+  ? await fetchLiveRequestsByType('booking')
+  : await readBookingRequestsFromStorage();
   } else {
     bookingRequests = await saveBookingRequestLocally(bookingRequest);
   }

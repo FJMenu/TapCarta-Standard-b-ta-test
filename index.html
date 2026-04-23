@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.1.1';
+    const APP_VERSION = 'V1.1.2';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -2157,6 +2157,16 @@ function getBookingStatusLabel(status) {
     return tBooking.bookingStatusCancelled;
   }
 
+  if (status === 'modified') {
+    return currentLang === 'fr'
+      ? 'Modification proposée'
+      : currentLang === 'es'
+        ? 'Modificación propuesta'
+        : currentLang === 'nl'
+          ? 'Wijziging voorgesteld'
+          : 'Modification proposed';
+  }
+
   if (status === 'confirmed') {
     return currentLang === 'fr'
       ? 'Confirmée'
@@ -2196,6 +2206,22 @@ function isEditingBookingRequest() {
 
 function buildBookingRequestSummaryText(bookingRequest) {
   const tBooking = getBookingTexts(currentLang);
+  const proposedTimeLabel = currentLang === 'fr'
+    ? 'Horaire proposé'
+    : currentLang === 'es'
+      ? 'Hora propuesta'
+      : currentLang === 'nl'
+        ? 'Voorgesteld uur'
+        : 'Proposed time';
+
+  const restaurantMessageLabel = currentLang === 'fr'
+    ? 'Message du restaurant'
+    : currentLang === 'es'
+      ? 'Mensaje del restaurante'
+      : currentLang === 'nl'
+        ? 'Bericht van het restaurant'
+        : 'Restaurant message';
+
   const lines = [
     `${tBooking.bookingName}: ${bookingRequest?.customer?.name || '-'}`,
     `${tBooking.bookingPhone}: ${bookingRequest?.customer?.phone || '-'}`,
@@ -2204,6 +2230,16 @@ function buildBookingRequestSummaryText(bookingRequest) {
     `${tBooking.bookingPeople}: ${bookingRequest?.booking?.people || '-'}`,
     `${tBooking.bookingStatusLabel}: ${getBookingStatusLabel(bookingRequest?.status || 'pending')}`
   ];
+
+  const proposedTime = bookingRequest?.restaurantResponse?.proposal?.proposedTime || '';
+  if (proposedTime) {
+    lines.push(`${proposedTimeLabel}: ${proposedTime}`);
+  }
+
+  const restaurantMessage = bookingRequest?.restaurantResponse?.message || '';
+  if (restaurantMessage) {
+    lines.push(`${restaurantMessageLabel}: ${restaurantMessage}`);
+  }
 
   if (bookingRequest?.booking?.note) {
     lines.push(`${tBooking.bookingNote}: ${bookingRequest.booking.note}`);
@@ -2230,7 +2266,8 @@ function viewLastBookingRequest() {
 function editLastBookingRequest() {
   const bookingRequest = getLastBookingRequest();
 
-  if (!bookingRequest || bookingRequest.status === 'cancelled') return;
+  if (!bookingRequest) return;
+  if (['cancelled', 'confirmed', 'refused', 'modified'].includes(bookingRequest.status || 'pending')) return;
 
   editingBookingRequestId = bookingRequest.requestId || null;
   loadBookingRequestIntoForm(bookingRequest);
@@ -2248,7 +2285,8 @@ function editLastBookingRequest() {
 function cancelLastBookingRequest() {
   const bookingRequest = getLastBookingRequest();
 
-  if (!bookingRequest || bookingRequest.status === 'cancelled') return;
+  if (!bookingRequest) return;
+  if (['cancelled', 'confirmed', 'refused'].includes(bookingRequest.status || 'pending')) return;
 
   const tBooking = getBookingTexts(currentLang);
 
@@ -2280,13 +2318,23 @@ function renderLastBookingRequestCard() {
 
   const tBooking = getBookingTexts(currentLang);
   const status = bookingRequest.status || 'pending';
-  const isLocked = ['confirmed', 'cancelled', 'refused'].includes(status);
+  const canEdit = !['confirmed', 'cancelled', 'refused', 'modified'].includes(status);
+  const canCancel = !['confirmed', 'cancelled', 'refused'].includes(status);
   const preorderItems = Array.isArray(bookingRequest.booking.preorderItems)
     ? bookingRequest.booking.preorderItems
     : [];
 
   const statusLabel = getBookingStatusLabel(status);
   const restaurantMessage = bookingRequest.restaurantResponse?.message || '';
+  const proposedTime = bookingRequest.restaurantResponse?.proposal?.proposedTime || '';
+
+  const proposedTimeLabel = currentLang === 'fr'
+    ? 'Horaire proposé'
+    : currentLang === 'es'
+      ? 'Hora propuesta'
+      : currentLang === 'nl'
+        ? 'Voorgesteld uur'
+        : 'Proposed time';
 
   const statusUi = status === 'confirmed'
     ? {
@@ -2333,33 +2381,48 @@ function renderLastBookingRequestCard() {
                     : 'The restaurant has refused your booking.'
             )
           }
-        : status === 'processing'
+        : status === 'modified'
           ? {
               card: 'border-sky-400/35 bg-sky-500/10',
               badge: 'border-sky-300/35 bg-sky-500/15 text-sky-100',
               message: 'border-sky-300/20 bg-sky-500/10 text-sky-100',
               text: restaurantMessage || (
                 currentLang === 'fr'
-                  ? 'Le restaurant traite actuellement votre réservation.'
+                  ? 'Le restaurant vous propose une modification de votre réservation.'
                   : currentLang === 'es'
-                    ? 'El restaurante está tratando actualmente tu reserva.'
+                    ? 'El restaurante le propone una modificación de su reserva.'
                     : currentLang === 'nl'
-                      ? 'Het restaurant verwerkt momenteel je reservatie.'
-                      : 'The restaurant is currently processing your booking.'
+                      ? 'Het restaurant stelt een wijziging van uw reservatie voor.'
+                      : 'The restaurant proposes a modification to your booking.'
               )
             }
-          : {
-              card: 'border-amber-300/35 bg-amber-500/10',
-              badge: 'border-amber-300/35 bg-amber-500/15 text-amber-100',
-              message: 'border-amber-300/20 bg-amber-500/10 text-amber-100',
-              text: currentLang === 'fr'
-                ? 'Votre réservation a bien été envoyée et reste en attente de réponse.'
-                : currentLang === 'es'
-                  ? 'Tu reserva ha sido enviada correctamente y está pendiente de respuesta.'
-                  : currentLang === 'nl'
-                    ? 'Je reservatie is goed verzonden en wacht op een antwoord.'
-                    : 'Your booking has been sent and is awaiting a reply.'
-            };
+          : status === 'processing'
+            ? {
+                card: 'border-sky-400/35 bg-sky-500/10',
+                badge: 'border-sky-300/35 bg-sky-500/15 text-sky-100',
+                message: 'border-sky-300/20 bg-sky-500/10 text-sky-100',
+                text: restaurantMessage || (
+                  currentLang === 'fr'
+                    ? 'Le restaurant traite actuellement votre réservation.'
+                    : currentLang === 'es'
+                      ? 'El restaurante está tratando actualmente tu reserva.'
+                      : currentLang === 'nl'
+                        ? 'Het restaurant verwerkt momenteel je reservatie.'
+                        : 'The restaurant is currently processing your booking.'
+                )
+              }
+            : {
+                card: 'border-amber-300/35 bg-amber-500/10',
+                badge: 'border-amber-300/35 bg-amber-500/15 text-amber-100',
+                message: 'border-amber-300/20 bg-amber-500/10 text-amber-100',
+                text: currentLang === 'fr'
+                  ? 'Votre réservation a bien été envoyée et reste en attente de réponse.'
+                  : currentLang === 'es'
+                    ? 'Tu reserva ha sido enviada correctamente y está pendiente de respuesta.'
+                    : currentLang === 'nl'
+                      ? 'Je reservatie is goed verzonden en wacht op een antwoord.'
+                      : 'Your booking has been sent and is awaiting a reply.'
+              };
 
   return `
     <div id="client-booking-card" class="mt-4 rounded-2xl border ${statusUi.card} p-4">
@@ -2380,24 +2443,28 @@ function renderLastBookingRequestCard() {
           <button onclick="viewLastBookingRequest()" class="btn-action px-3 py-2 rounded-xl border border-gold/25 bg-black/20 text-xs font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
             ${tBooking.bookingActionView}
           </button>
-          <button onclick="editLastBookingRequest()" ${isLocked ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${isLocked ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-gold/25 bg-black/20 text-cream/85 hover:border-gold/50 hover:bg-gold/10'}">
+          <button onclick="editLastBookingRequest()" ${!canEdit ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${!canEdit ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-gold/25 bg-black/20 text-cream/85 hover:border-gold/50 hover:bg-gold/10'}">
             ${tBooking.bookingActionEdit}
           </button>
-          <button onclick="cancelLastBookingRequest()" ${isLocked ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${isLocked ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-red-400/40 bg-red-500/10 text-cream/90 hover:border-red-300/70 hover:bg-red-500/20'}">
+          <button onclick="cancelLastBookingRequest()" ${!canCancel ? 'disabled' : ''} class="btn-action px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${!canCancel ? 'border-gold/10 bg-black/10 text-cream/30 cursor-not-allowed' : 'border-red-400/40 bg-red-500/10 text-cream/90 hover:border-red-300/70 hover:bg-red-500/20'}">
             ${tBooking.bookingActionCancel}
           </button>
         </div>
       </div>
 
-
-
       ${['pending', 'processing'].includes(status) ? renderClientRequestRefreshPanel() : ''}
 
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">        <div><span class="text-gold/85 font-semibold">${tBooking.bookingName} :</span> ${escapeBookingHtml(bookingRequest.customer.name || '-')}</div>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
+        <div><span class="text-gold/85 font-semibold">${tBooking.bookingName} :</span> ${escapeBookingHtml(bookingRequest.customer.name || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingPhone} :</span> ${escapeBookingHtml(bookingRequest.customer.phone || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingDate} :</span> ${escapeBookingHtml(formatBookingDateForDisplay(bookingRequest.booking.date || ''))}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingTime} :</span> ${escapeBookingHtml(bookingRequest.booking.time || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${tBooking.bookingPeople} :</span> ${escapeBookingHtml(String(bookingRequest.booking.people || '-'))}</div>
+        ${proposedTime ? `<div><span class="text-gold/85 font-semibold">${proposedTimeLabel} :</span> ${escapeBookingHtml(proposedTime)}</div>` : ''}
+      </div>
+
+      <div class="mt-3 rounded-xl border ${statusUi.message} px-3 py-3 text-sm text-cream/90">
+        ${escapeBookingHtml(statusUi.text)}
       </div>
 
       ${bookingRequest.confirmedAt ? `
@@ -2728,14 +2795,17 @@ function renderLastOrderRequestCard() {
       phone: 'Téléphone',
       date: 'Date',
       time: 'Heure',
+      proposedTime: 'Horaire proposé',
       updatedAt: 'Dernière mise à jour',
       note: 'Remarque',
       items: 'Articles',
       refusalReason: 'Motif du refus',
       waiting: 'Votre commande a bien été transmise. La réponse du restaurant apparaîtra ici.',
       processing: 'Le restaurant a consulté votre commande et la traite actuellement.',
+      modified: 'Le restaurant vous propose une modification de votre commande.',
       confirmed: 'Le restaurant a confirmé votre commande.',
-      refused: 'Le restaurant a refusé votre commande.'
+      refused: 'Le restaurant a refusé votre commande.',
+      cancelled: 'Le restaurant a annulé votre commande.'
     },
     es: {
       title: 'Seguimiento de tu pedido',
@@ -2745,14 +2815,17 @@ function renderLastOrderRequestCard() {
       phone: 'Teléfono',
       date: 'Fecha',
       time: 'Hora',
+      proposedTime: 'Hora propuesta',
       updatedAt: 'Última actualización',
       note: 'Observación',
       items: 'Artículos',
       refusalReason: 'Motivo del rechazo',
       waiting: 'Tu pedido ha sido transmitido correctamente. La respuesta del restaurante aparecerá aquí.',
       processing: 'El restaurante ha consultado tu pedido y lo está gestionando.',
+      modified: 'El restaurante te propone una modificación de tu pedido.',
       confirmed: 'El restaurante ha confirmado tu pedido.',
-      refused: 'El restaurante ha rechazado tu pedido.'
+      refused: 'El restaurante ha rechazado tu pedido.',
+      cancelled: 'El restaurante ha cancelado tu pedido.'
     },
     en: {
       title: 'Your order tracking',
@@ -2762,14 +2835,17 @@ function renderLastOrderRequestCard() {
       phone: 'Phone',
       date: 'Date',
       time: 'Time',
+      proposedTime: 'Proposed time',
       updatedAt: 'Last update',
       note: 'Note',
       items: 'Items',
       refusalReason: 'Reason for refusal',
       waiting: 'Your order has been transmitted. The restaurant response will appear here.',
       processing: 'The restaurant has opened your order and is currently processing it.',
+      modified: 'The restaurant proposes a modification to your order.',
       confirmed: 'The restaurant has confirmed your order.',
-      refused: 'The restaurant has refused your order.'
+      refused: 'The restaurant has refused your order.',
+      cancelled: 'The restaurant has cancelled your order.'
     },
     nl: {
       title: 'Opvolging van je bestelling',
@@ -2779,28 +2855,44 @@ function renderLastOrderRequestCard() {
       phone: 'Telefoon',
       date: 'Datum',
       time: 'Uur',
+      proposedTime: 'Voorgesteld uur',
       updatedAt: 'Laatste update',
       note: 'Opmerking',
       items: 'Artikelen',
       refusalReason: 'Reden van weigering',
       waiting: 'Je bestelling is goed doorgestuurd. Het antwoord van het restaurant verschijnt hier.',
       processing: 'Het restaurant heeft je bestelling geopend en verwerkt ze momenteel.',
+      modified: 'Het restaurant stelt een wijziging van je bestelling voor.',
       confirmed: 'Het restaurant heeft je bestelling bevestigd.',
-      refused: 'Het restaurant heeft je bestelling geweigerd.'
+      refused: 'Het restaurant heeft je bestelling geweigerd.',
+      cancelled: 'Het restaurant heeft je bestelling geannuleerd.'
     }
   };
 
   const texts = cardTexts[currentLang] || cardTexts.fr;
   const orderItems = Array.isArray(orderRequest.order.items) ? orderRequest.order.items : [];
+  const proposedTime = orderRequest.restaurantResponse?.proposal?.proposedTime || '';
+  const status = orderRequest.status || 'sent';
+
   const responseMessageByStatus = {
     sent: texts.waiting,
     processing: texts.processing,
+    modified: orderRequest.restaurantResponse?.message || texts.modified,
     confirmed: texts.confirmed,
-    refused: texts.refused
+    refused: orderRequest.restaurantResponse?.message || texts.refused,
+    cancelled: orderRequest.restaurantResponse?.message || texts.cancelled
   };
 
+  const cardClass = status === 'confirmed'
+    ? 'border-emerald-400/35 bg-emerald-500/10'
+    : status === 'modified'
+      ? 'border-sky-400/35 bg-sky-500/10'
+      : status === 'refused' || status === 'cancelled'
+        ? 'border-red-400/35 bg-red-500/10'
+        : 'border-gold/30 bg-black/20';
+
   return `
-    <div id="client-order-card" class="mt-4 rounded-2xl border border-gold/30 bg-black/20 p-4">
+    <div id="client-order-card" class="mt-4 rounded-2xl border ${cardClass} p-4">
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div class="text-xs font-semibold uppercase tracking-wide text-gold/85">
@@ -2808,12 +2900,10 @@ function renderLastOrderRequestCard() {
           </div>
           <div class="mt-2 text-sm text-cream/90">
             <span class="font-semibold text-gold/90">${texts.status} :</span>
-            ${escapeBookingHtml(getOrderStatusLabel(orderRequest.status || 'sent'))}
+            ${escapeBookingHtml(getOrderStatusLabel(status))}
           </div>
         </div>
       </div>
-
-      ${''}
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
         <div><span class="text-gold/85 font-semibold">${texts.reference} :</span> ${escapeBookingHtml(orderRequest.requestId || '-')}</div>
@@ -2822,10 +2912,11 @@ function renderLastOrderRequestCard() {
         <div><span class="text-gold/85 font-semibold">${texts.phone} :</span> ${escapeBookingHtml(orderRequest.customer.phone || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${texts.date} :</span> ${escapeBookingHtml(formatBookingDateForDisplay(orderRequest.order.date || ''))}</div>
         <div><span class="text-gold/85 font-semibold">${texts.time} :</span> ${escapeBookingHtml(orderRequest.order.time || '-')}</div>
+        ${proposedTime ? `<div><span class="text-gold/85 font-semibold">${texts.proposedTime} :</span> ${escapeBookingHtml(proposedTime)}</div>` : ''}
       </div>
 
       <div class="mt-3 rounded-xl border border-gold/15 bg-black/15 px-3 py-3 text-sm text-cream/80">
-        ${escapeBookingHtml(responseMessageByStatus[orderRequest.status || 'sent'] || texts.waiting)}
+        ${escapeBookingHtml(responseMessageByStatus[status] || texts.waiting)}
       </div>
 
       ${orderRequest.order.note ? `
@@ -2842,7 +2933,7 @@ function renderLastOrderRequestCard() {
         </div>
       ` : ''}
 
-      ${orderRequest.status === 'refused' && orderRequest.restaurantResponse?.reason ? `
+      ${['refused', 'cancelled'].includes(status) && orderRequest.restaurantResponse?.reason ? `
         <div class="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-3 text-sm text-cream/90">
           <span class="text-red-200 font-semibold">${texts.refusalReason} :</span>
           ${escapeBookingHtml(orderRequest.restaurantResponse.reason)}

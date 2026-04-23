@@ -1990,7 +1990,33 @@ async function readBookingRequestsFromStorage() {
           const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
 
           if (syncedLastBooking) {
-            localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(syncedLastBooking));
+            const localDecisionStatus = parsedLastBooking?.status || '';
+            const keepLocalDecision =
+              ['accepted_by_client', 'rejected_by_client'].includes(localDecisionStatus) &&
+              !['confirmed', 'cancelled', 'refused'].includes(syncedLastBooking.status || '');
+
+            const mergedLastBooking = keepLocalDecision
+              ? {
+                  ...syncedLastBooking,
+                  ...parsedLastBooking,
+                  status: parsedLastBooking.status,
+                  updatedAt: parsedLastBooking.updatedAt || syncedLastBooking.updatedAt,
+                  clientDecision: parsedLastBooking.clientDecision || '',
+                  clientDecisionAt: parsedLastBooking.clientDecisionAt || '',
+                  restaurantResponse: {
+                    ...(syncedLastBooking.restaurantResponse || {}),
+                    ...(parsedLastBooking.restaurantResponse || {})
+                  }
+                }
+              : {
+                  ...syncedLastBooking,
+                  restaurantResponse: {
+                    ...(syncedLastBooking.restaurantResponse || {}),
+                    ...(parsedLastBooking?.restaurantResponse || {})
+                  }
+                };
+
+            localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedLastBooking));
           }
         }
       } catch (syncError) {
@@ -2072,6 +2098,8 @@ function getLastBookingRequest() {
 async function updateStoredBookingRequest(updatedRequest) {
   if (!updatedRequest || !updatedRequest.requestId) return null;
 
+  localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
+
   if (LIVE_REQUESTS_ENABLED && updatedRequest.liveRequestId) {
     try {
       const { error } = await supabaseClient
@@ -2092,7 +2120,7 @@ async function updateStoredBookingRequest(updatedRequest) {
       if (error) throw error;
     } catch (error) {
       console.error('Supabase booking update error:', error);
-      return null;
+      return updatedRequest;
     }
 
     localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));

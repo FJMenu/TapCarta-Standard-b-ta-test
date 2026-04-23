@@ -2144,10 +2144,33 @@ async function updateStoredBookingRequest(updatedRequest) {
         return mergedRequest;
       }
 
-      console.warn('Supabase booking update: aucune ligne mise à jour pour id =', liveRequestId);
-      return updatedRequest;
+      if (!data) {
+        console.warn('Supabase booking update: aucune ligne mise à jour pour id =', liveRequestId);
+        alert(`Supabase n'a mis à jour aucune ligne.\nID utilisé : ${liveRequestId}`);
+        return updatedRequest;
+      }
+
+      const syncedRequest = mapLiveBookingRowToRequest(data) || updatedRequest;
+      const mergedRequest = {
+        ...updatedRequest,
+        ...syncedRequest,
+        liveRequestId: syncedRequest.liveRequestId || liveRequestId,
+        requestId: syncedRequest.requestId || liveRequestId,
+        status: syncedRequest.status || updatedRequest.status,
+        updatedAt: syncedRequest.updatedAt || updatedRequest.updatedAt,
+        clientDecision: updatedRequest.clientDecision || '',
+        clientDecisionAt: updatedRequest.clientDecisionAt || '',
+        restaurantResponse: {
+          ...(syncedRequest.restaurantResponse || {}),
+          ...(updatedRequest.restaurantResponse || {})
+        }
+      };
+
+      localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedRequest));
+      return mergedRequest;
     } catch (error) {
       console.error('Supabase booking update error:', error);
+      alert(`Erreur Supabase update réservation : ${error?.message || error}`);
       return updatedRequest;
     }
   }

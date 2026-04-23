@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.1.5';
+    const APP_VERSION = 'V1.1.6';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -2100,9 +2100,11 @@ async function updateStoredBookingRequest(updatedRequest) {
 
   localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
 
-  if (LIVE_REQUESTS_ENABLED && updatedRequest.liveRequestId) {
+  const liveRequestId = updatedRequest.liveRequestId || updatedRequest.requestId || null;
+
+  if (LIVE_REQUESTS_ENABLED && liveRequestId) {
     try {
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('requests')
         .update({
           client_name: updatedRequest?.customer?.name || '',
@@ -2115,16 +2117,39 @@ async function updateStoredBookingRequest(updatedRequest) {
           note: updatedRequest?.booking?.note || '',
           status: updatedRequest?.status || 'pending'
         })
-        .eq('id', updatedRequest.liveRequestId);
+        .eq('id', liveRequestId)
+        .select('*')
+        .maybeSingle();
 
       if (error) throw error;
+
+      if (data) {
+        const syncedRequest = mapLiveBookingRowToRequest(data) || updatedRequest;
+        const mergedRequest = {
+          ...updatedRequest,
+          ...syncedRequest,
+          liveRequestId: syncedRequest.liveRequestId || liveRequestId,
+          requestId: syncedRequest.requestId || liveRequestId,
+          status: syncedRequest.status || updatedRequest.status,
+          updatedAt: syncedRequest.updatedAt || updatedRequest.updatedAt,
+          clientDecision: updatedRequest.clientDecision || '',
+          clientDecisionAt: updatedRequest.clientDecisionAt || '',
+          restaurantResponse: {
+            ...(syncedRequest.restaurantResponse || {}),
+            ...(updatedRequest.restaurantResponse || {})
+          }
+        };
+
+        localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedRequest));
+        return mergedRequest;
+      }
+
+      console.warn('Supabase booking update: aucune ligne mise à jour pour id =', liveRequestId);
+      return updatedRequest;
     } catch (error) {
       console.error('Supabase booking update error:', error);
       return updatedRequest;
     }
-
-    localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
-    return updatedRequest;
   }
 
   const existingRequests = await readBookingRequestsFromStorage();

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.1.2';
+    const APP_VERSION = 'V1.1.3';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -2204,6 +2204,164 @@ function isEditingBookingRequest() {
   return Boolean(editingBookingRequestId);
 }
 
+function escapeBookingModalHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function removeBookingSummaryModal() {
+  const existingModal = document.getElementById('booking-summary-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+}
+
+function getBookingSummaryModalTexts() {
+  if (currentLang === 'es') {
+    return {
+      title: 'Detalle de su solicitud',
+      close: 'Cerrar',
+      status: 'Estado',
+      proposedTime: 'Hora propuesta',
+      restaurantMessage: 'Mensaje del restaurante'
+    };
+  }
+
+  if (currentLang === 'en') {
+    return {
+      title: 'Your request details',
+      close: 'Close',
+      status: 'Status',
+      proposedTime: 'Proposed time',
+      restaurantMessage: 'Restaurant message'
+    };
+  }
+
+  if (currentLang === 'nl') {
+    return {
+      title: 'Details van uw aanvraag',
+      close: 'Sluiten',
+      status: 'Status',
+      proposedTime: 'Voorgesteld uur',
+      restaurantMessage: 'Bericht van het restaurant'
+    };
+  }
+
+  return {
+    title: 'Détail de votre demande',
+    close: 'Fermer',
+    status: 'Statut',
+    proposedTime: 'Horaire proposé',
+    restaurantMessage: 'Message du restaurant'
+  };
+}
+
+function buildBookingSummaryModalHtml(bookingRequest) {
+  const tBooking = getBookingTexts(currentLang);
+  const modalTexts = getBookingSummaryModalTexts();
+  const proposedTime = bookingRequest?.restaurantResponse?.proposal?.proposedTime || '';
+  const restaurantMessage = bookingRequest?.restaurantResponse?.message || '';
+  const preorderItems = Array.isArray(bookingRequest?.booking?.preorderItems)
+    ? bookingRequest.booking.preorderItems
+    : [];
+
+  return `
+    <div id="booking-summary-modal" class="fixed inset-0 z-[140] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-gold/20 bg-[#0D0D0D] shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+        <div class="sticky top-0 z-10 bg-[#0D0D0D]/95 backdrop-blur border-b border-white/8 px-5 py-4 flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="text-xs uppercase tracking-[0.18em] text-gold/70 mb-1">${tBooking.bookingTitle || 'Reserva'}</div>
+            <h3 class="font-display text-xl font-bold text-cream">${modalTexts.title}</h3>
+          </div>
+
+          <button
+            type="button"
+            onclick="closeBookingSummaryModal()"
+            class="btn-action px-4 py-2 rounded-xl border border-white/12 text-sm font-semibold text-cream hover:bg-white/5 transition-all"
+          >
+            ${modalTexts.close}
+          </button>
+        </div>
+
+        <div class="p-5 md:p-6 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingName}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(bookingRequest?.customer?.name || '-')}</div>
+            </div>
+
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingPhone}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(bookingRequest?.customer?.phone || '-')}</div>
+            </div>
+
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingDate}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(formatBookingDateForDisplay(bookingRequest?.booking?.date || ''))}</div>
+            </div>
+
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingTime}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(bookingRequest?.booking?.time || '-')}</div>
+            </div>
+
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingPeople}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(String(bookingRequest?.booking?.people || '-'))}</div>
+            </div>
+
+            <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${modalTexts.status}</div>
+              <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(getBookingStatusLabel(bookingRequest?.status || 'pending'))}</div>
+            </div>
+
+            ${proposedTime ? `
+              <div class="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 md:col-span-2">
+                <div class="text-[11px] uppercase tracking-wide text-sky-100/70 mb-1">${modalTexts.proposedTime}</div>
+                <div class="text-sm font-semibold text-sky-100">${escapeBookingModalHtml(proposedTime)}</div>
+              </div>
+            ` : ''}
+
+            ${restaurantMessage ? `
+              <div class="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 md:col-span-2">
+                <div class="text-[11px] uppercase tracking-wide text-sky-100/70 mb-1">${modalTexts.restaurantMessage}</div>
+                <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(restaurantMessage)}</div>
+              </div>
+            ` : ''}
+
+            ${bookingRequest?.booking?.note ? `
+              <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3 md:col-span-2">
+                <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingNote}</div>
+                <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(bookingRequest.booking.note)}</div>
+              </div>
+            ` : ''}
+
+            ${preorderItems.length ? `
+              <div class="rounded-xl border border-white/8 bg-black/20 px-4 py-3 md:col-span-2">
+                <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">${tBooking.bookingPreorder}</div>
+                <div class="text-sm font-semibold text-cream">${escapeBookingModalHtml(preorderItems.map((item) => item.name).join(', '))}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button
+              type="button"
+              onclick="closeBookingSummaryModal()"
+              class="btn-action px-4 py-3 rounded-xl border border-gold/30 text-sm font-semibold text-gold hover:bg-gold/10 transition-all"
+            >
+              ${modalTexts.close}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function buildBookingRequestSummaryText(bookingRequest) {
   const tBooking = getBookingTexts(currentLang);
   const proposedTimeLabel = currentLang === 'fr'
@@ -2256,11 +2414,25 @@ function buildBookingRequestSummaryText(bookingRequest) {
   return lines.join('\n');
 }
 
+window.closeBookingSummaryModal = function() {
+  removeBookingSummaryModal();
+};
+
 function viewLastBookingRequest() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest) return;
 
-  alert(buildBookingRequestSummaryText(bookingRequest));
+  removeBookingSummaryModal();
+  document.body.insertAdjacentHTML('beforeend', buildBookingSummaryModalHtml(bookingRequest));
+
+  const modal = document.getElementById('booking-summary-modal');
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeBookingSummaryModal();
+      }
+    });
+  }
 }
 
 function editLastBookingRequest() {

@@ -6,7 +6,8 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.1';
+    const APP_VERSION = 'V1.2.2';
+const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -373,6 +374,43 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       line-height: 1;
     }
 
+    .tapcarta-public-signature {
+      position: fixed;
+      top: 82px;
+      right: 20px;
+      z-index: 45;
+      width: min(230px, calc(100vw - 24px));
+      padding: 10px 12px;
+      border: 1px solid rgba(242, 199, 68, 0.22);
+      border-radius: 16px;
+      background: rgba(15, 15, 15, 0.82);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      text-align: center;
+    }
+
+    .tapcarta-public-logo {
+      display: block;
+      width: 158px;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto 4px;
+    }
+
+    .tapcarta-public-text {
+      font-size: 0.68rem;
+      line-height: 1.25;
+      color: rgba(250, 246, 238, 0.66);
+      letter-spacing: 0.03em;
+    }
+
+    .tapcarta-public-version {
+      color: #F2C744;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     .menu-item-subtitle {
       font-size: 0.75rem;
       color: rgba(250, 246, 238, 0.6);
@@ -692,6 +730,24 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
         padding: 8px 10px;
       }
 
+      .tapcarta-public-signature {
+        top: 70px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+        padding: 8px 10px;
+      }
+
+      .tapcarta-public-logo {
+        width: 145px;
+        margin-bottom: 2px;
+      }
+
+      .tapcarta-public-text {
+        font-size: 0.64rem;
+      }
+
       .lang-btn {
         min-width: 44px;
         height: 42px;
@@ -773,6 +829,19 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       <span class="lang-label">NL</span>
       <span class="lang-flag">🇳🇱</span>
     </button>
+  </div>
+
+  <div class="tapcarta-public-signature" aria-label="TapCarta menu digital">
+    <img
+      id="tapcarta-public-logo"
+      class="tapcarta-public-logo"
+      src=""
+      alt="TapCarta"
+      loading="eager"
+    >
+    <div class="tapcarta-public-text">
+      Menu digital interactif · Version <span id="tapcarta-public-version" class="tapcarta-public-version"></span>
+    </div>
   </div>
 
   <div id="app-wrapper" class="w-full min-h-screen bg-dark text-cream">
@@ -5380,6 +5449,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 const manifestLink = document.getElementById('manifest-link');
 const appleTouchIconLink = document.getElementById('apple-touch-icon-link');
 const faviconLink = document.getElementById('favicon-link');
+const tapCartaPublicLogo = document.getElementById('tapcarta-public-logo');
+const tapCartaPublicVersion = document.getElementById('tapcarta-public-version');
 
 if (manifestLink) {
   manifestLink.href = MANIFEST_URL;
@@ -5391,6 +5462,14 @@ if (appleTouchIconLink) {
 
 if (faviconLink) {
   faviconLink.href = FAVICON_URL;
+}
+
+if (tapCartaPublicLogo) {
+  tapCartaPublicLogo.src = TAPCARTA_PUBLIC_LOGO_URL;
+}
+
+if (tapCartaPublicVersion) {
+  tapCartaPublicVersion.textContent = APP_VERSION;
 }
 
   const reloadingForFreshVersion = ensureFreshHtmlVersion();

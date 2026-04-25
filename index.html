@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.1.6';
+    const APP_VERSION = 'V1.2.0';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -3111,7 +3111,53 @@ function writeOrderRequestsToStorage(requests) {
   localStorage.setItem(getOrderStorageKey(), JSON.stringify(requests));
 }
 
-function saveOrderRequestLocally(orderRequest) {
+async function writeOrderRequestToSource(orderRequest) {
+  if (LIVE_REQUESTS_ENABLED) {
+    const liveOrder = await insertLiveRequest({
+      restaurant_id: orderRequest?.restaurantId || LIVE_RESTAURANT_ID,
+      type: 'order',
+      status: 'pending',
+      client_name: orderRequest?.customer?.name || '',
+      client_phone: orderRequest?.customer?.phone || '',
+      client_language: orderRequest?.customer?.language || currentLang || 'fr',
+      booking_date: orderRequest?.order?.date || null,
+      booking_time: orderRequest?.order?.time || null,
+      party_size: null,
+      items: Array.isArray(orderRequest?.order?.items)
+        ? orderRequest.order.items.map((item) => ({
+            id: item?.id || '',
+            name: item?.name || '',
+            quantity: Number(item?.quantity || 1),
+            price: Number(item?.unitPrice || item?.price || 0),
+            unitPrice: item?.unitPrice ?? null,
+            lineTotal: item?.lineTotal ?? null
+          }))
+        : [],
+      note: orderRequest?.order?.note || '',
+      restaurant_message: orderRequest?.restaurantResponse?.message || ''
+    });
+
+    const syncedOrderRequest = {
+      ...orderRequest,
+      liveRequestId: liveOrder.id,
+      requestId: liveOrder.id,
+      status: liveOrder.status || 'pending',
+      createdAt: liveOrder.created_at || orderRequest.createdAt,
+      updatedAt: liveOrder.updated_at || orderRequest.updatedAt || null
+    };
+
+    const existingRequests = readOrderRequestsFromStorage();
+    const withoutDuplicate = existingRequests.filter(
+      (entry) => String(entry?.requestId) !== String(syncedOrderRequest.requestId)
+    );
+    const updatedRequests = [syncedOrderRequest, ...withoutDuplicate].slice(0, 20);
+
+    writeOrderRequestsToStorage(updatedRequests);
+    localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(syncedOrderRequest));
+
+    return updatedRequests;
+  }
+
   const maxItems = 20;
   const existingRequests = readOrderRequestsFromStorage();
   const updatedRequests = [orderRequest, ...existingRequests].slice(0, maxItems);
@@ -3120,6 +3166,10 @@ function saveOrderRequestLocally(orderRequest) {
   localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(orderRequest));
 
   return updatedRequests;
+}
+
+async function saveOrderRequestLocally(orderRequest) {
+  return await writeOrderRequestToSource(orderRequest);
 }
 
 function getLastOrderRequest() {
@@ -3790,9 +3840,8 @@ function closeOrderReview() {
   renderMenu();
 }
 
-function validateOrderReview() {
+async function validateOrderReview() {
   const t = translations[currentLang];
-  const tBooking = getBookingTexts(currentLang);
 
   if (!siteConfig.modules?.ordering) {
     orderReviewOpen = false;
@@ -3822,7 +3871,7 @@ function validateOrderReview() {
   const digitCount = normalizedPhone.replace(/\D/g, '').length;
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
-if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
     const phoneExampleByLang = {
       fr: 'Exemple : +34612345678',
       es: 'Ejemplo: +34612345678',
@@ -3831,11 +3880,12 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
     };
 
     alert(({
-  fr: `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`,
-  es: `Por favor, indique un número de teléfono válido.\n${phoneExampleByLang.es}`,
-  en: `Please enter a valid phone number.\n${phoneExampleByLang.en}`,
-  nl: `Geef een geldig telefoonnummer op.\n${phoneExampleByLang.nl}`
-})[currentLang] || `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`);
+      fr: `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`,
+      es: `Por favor, indique un número de teléfono válido.\n${phoneExampleByLang.es}`,
+      en: `Please enter a valid phone number.\n${phoneExampleByLang.en}`,
+      nl: `Geef een geldig telefoonnummer op.\n${phoneExampleByLang.nl}`
+    })[currentLang] || `Veuillez entrer un numéro de téléphone valide.\n${phoneExampleByLang.fr}`);
+
     renderMenu();
     return;
   }
@@ -3843,75 +3893,89 @@ if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
   orderForm.phone = normalizedPhone;
 
   const orderItems = cart.map((cartItem) => {
-  const sourceItem = Object.values(menuData).flat().find((menuItem) => menuItem.id === cartItem.id);
-  const itemLabel = sourceItem?.adminName || sourceItem?.name || cartItem.id;
+    const sourceItem = Object.values(menuData).flat().find((menuItem) => menuItem.id === cartItem.id);
+    const itemLabel = sourceItem?.adminName || sourceItem?.name || cartItem.id;
 
-  const numericPrice = sourceItem && sourceItem.price
-    ? parseFloat(String(sourceItem.price).replace('€', '').replace(',', '.').trim())
-    : NaN;
+    const numericPrice = sourceItem && sourceItem.price
+      ? parseFloat(String(sourceItem.price).replace('€', '').replace(',', '.').trim())
+      : NaN;
 
-  return {
-    id: cartItem.id,
-    name: itemLabel,
-    quantity: cartItem.quantity,
-    unitPrice: Number.isNaN(numericPrice) ? null : numericPrice,
-    lineTotal: Number.isNaN(numericPrice) ? null : Number((numericPrice * cartItem.quantity).toFixed(2))
+    return {
+      id: cartItem.id,
+      name: itemLabel,
+      quantity: cartItem.quantity,
+      unitPrice: Number.isNaN(numericPrice) ? null : numericPrice,
+      lineTotal: Number.isNaN(numericPrice) ? null : Number((numericPrice * cartItem.quantity).toFixed(2))
+    };
+  });
+
+  const totalAmount = orderItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+  const nowIso = new Date().toISOString();
+
+  const orderRequest = {
+    restaurantId: siteConfig?.identity?.id || LIVE_RESTAURANT_ID || '',
+    requestId: `CMD-${Date.now()}`,
+    requestType: 'order',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    status: 'pending',
+    customer: {
+      name: orderForm.name,
+      phone: orderForm.phone,
+      language: currentLang
+    },
+    order: {
+      date: orderForm.date,
+      time: orderForm.time,
+      note: orderForm.note || '',
+      items: orderItems,
+      totalAmount: Number(totalAmount.toFixed(2))
+    },
+    restaurantResponse: {
+      reason: '',
+      message: '',
+      updatedBy: ''
+    }
   };
-});
 
-const totalAmount = orderItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+  try {
+    await saveOrderRequestLocally(orderRequest);
+  } catch (error) {
+    console.error('TapCarta order Supabase insert error:', error);
 
-const nowIso = new Date().toISOString();
+    const errorMessageByLang = {
+      fr: "La commande n'a pas pu être envoyée au restaurant.\n\nVeuillez réessayer dans quelques instants ou contacter le restaurant.",
+      es: "No se ha podido enviar el pedido al restaurante.\n\nInténtalo de nuevo en unos instantes o contacta con el restaurante.",
+      en: "The order could not be sent to the restaurant.\n\nPlease try again in a few moments or contact the restaurant.",
+      nl: "De bestelling kon niet naar het restaurant worden verzonden.\n\nProbeer het over enkele ogenblikken opnieuw of neem contact op met het restaurant."
+    };
 
-const orderRequest = {
-  restaurantId: siteConfig?.identity?.id || '',
-  requestId: `CMD-${Date.now()}`,
-  requestType: 'order',
-  createdAt: nowIso,
-  updatedAt: nowIso,
-  status: 'sent',
-  customer: {
-    name: orderForm.name,
-    phone: orderForm.phone,
-    language: currentLang
-  },
-  order: {
-    date: orderForm.date,
-    time: orderForm.time,
-    note: orderForm.note || '',
-    items: orderItems,
-    totalAmount: Number(totalAmount.toFixed(2))
-  },
-  restaurantResponse: {
-    reason: '',
-    message: '',
-    updatedBy: ''
+    alert(errorMessageByLang[currentLang] || errorMessageByLang.fr);
+    renderMenu();
+    return;
   }
-};
 
-saveOrderRequestLocally(orderRequest);
+  const confirmationMessageByLang = {
+    fr: "Votre commande a bien été envoyée au restaurant.\n\nElle est maintenant en attente de confirmation de sa part.",
+    es: "Tu pedido ha sido enviado correctamente al restaurante.\n\nAhora está pendiente de confirmación por su parte.",
+    en: "Your order has been sent to the restaurant.\n\nIt is now awaiting confirmation from them.",
+    nl: "Je bestelling is correct naar het restaurant verzonden.\n\nZe wacht nu op bevestiging van hun kant."
+  };
 
-const confirmationMessageByLang = {
-  fr: "Votre commande a bien été envoyée au restaurant.\n\nElle est maintenant en attente de confirmation de sa part.",
-  es: "Tu pedido ha sido enviado correctamente al restaurante.\n\nAhora está pendiente de confirmación por su parte.",
-  en: "Your order has been sent to the restaurant.\n\nIt is now awaiting confirmation from them.",
-  nl: "Je bestelling is correct naar het restaurant verzonden.\n\nZe wacht nu op bevestiging van hun kant."
-};
+  alert(confirmationMessageByLang[currentLang] || confirmationMessageByLang.fr);
 
-alert(confirmationMessageByLang[currentLang] || confirmationMessageByLang.fr);
+  cart = [];
+  orderReviewOpen = false;
 
-cart = [];
-orderReviewOpen = false;
+  orderForm = {
+    name: '',
+    phone: '',
+    date: '',
+    time: '',
+    note: ''
+  };
 
-orderForm = {
-  name: '',
-  phone: '',
-  date: '',
-  time: '',
-  note: ''
-};
-
-renderMenu();
+  renderMenu();
 }
 
 function removeFromCart(itemId) {

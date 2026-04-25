@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.0';
+    const APP_VERSION = 'V1.2.1';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 
@@ -47,8 +47,13 @@ async function fetchLiveRequestsByType(requestType) {
     return await readBookingRequestsFromStorage();
   }
 
+  if (requestType === 'order') {
+    return await readOrderRequestsFromSource();
+  }
+
   return [];
 }
+
 function mapLiveBookingRowToRequest(row) {
   if (!row) return null;
 
@@ -87,6 +92,60 @@ function mapLiveBookingRowToRequest(row) {
       reason: '',
       message: row.restaurant_message || '',
       updatedBy: ''
+    }
+  };
+}
+
+function mapLiveOrderRowToRequest(row) {
+  if (!row) return null;
+
+  const orderItems = Array.isArray(row.items)
+    ? row.items.map((item) => {
+        const quantity = Number(item?.quantity || 1);
+        const unitPrice = Number(item?.unitPrice ?? item?.price ?? 0);
+        const lineTotal = Number(item?.lineTotal ?? (unitPrice * quantity));
+
+        return {
+          id: item?.id || '',
+          name: item?.name || '',
+          category: item?.category || '',
+          quantity,
+          price: Number.isFinite(unitPrice) ? unitPrice : 0,
+          unitPrice: Number.isFinite(unitPrice) ? unitPrice : null,
+          lineTotal: Number.isFinite(lineTotal) ? Number(lineTotal.toFixed(2)) : null
+        };
+      })
+    : [];
+
+  const totalAmount = orderItems.reduce(
+    (sum, item) => sum + Number(item.lineTotal ?? (Number(item.price || 0) * Number(item.quantity || 1))),
+    0
+  );
+
+  return {
+    restaurantId: row.restaurant_id || LIVE_RESTAURANT_ID,
+    requestId: row.id,
+    liveRequestId: row.id,
+    requestType: 'order',
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || null,
+    status: row.status || 'pending',
+    customer: {
+      name: row.client_name || '',
+      phone: row.client_phone || '',
+      language: row.client_language || 'fr'
+    },
+    order: {
+      date: row.booking_date || '',
+      time: row.booking_time ? String(row.booking_time).slice(0, 5) : '',
+      note: row.note || '',
+      items: orderItems,
+      totalAmount: Number(totalAmount.toFixed(2))
+    },
+    restaurantResponse: {
+      reason: row.status || '',
+      message: row.restaurant_message || '',
+      updatedBy: row.restaurant_message ? 'restaurant' : ''
     }
   };
 }
@@ -3111,6 +3170,81 @@ function writeOrderRequestsToStorage(requests) {
   localStorage.setItem(getOrderStorageKey(), JSON.stringify(requests));
 }
 
+async function syncLastOrderRequestFromSource() {
+  if (!LIVE_REQUESTS_ENABLED) {
+    return getLastOrderRequest();
+  }
+
+  try {
+    const rawLastOrder = localStorage.getItem(getLastOrderStorageKey());
+    const parsedLastOrder = rawLastOrder ? JSON.parse(rawLastOrder) : null;
+    const liveRequestId = parsedLastOrder?.liveRequestId || parsedLastOrder?.requestId || null;
+
+    if (!liveRequestId) {
+      return parsedLastOrder || null;
+    }
+
+    const liveRow = await fetchLiveRequestById(liveRequestId);
+    const syncedLastOrder = mapLiveOrderRowToRequest(liveRow);
+
+    if (!syncedLastOrder) {
+      return parsedLastOrder || null;
+    }
+
+    const mergedLastOrder = {
+      ...(parsedLastOrder || {}),
+      ...syncedLastOrder,
+      restaurantResponse: {
+        ...(parsedLastOrder?.restaurantResponse || {}),
+        ...(syncedLastOrder.restaurantResponse || {})
+      }
+    };
+
+    localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(mergedLastOrder));
+
+    const existingOrders = readOrderRequestsFromStorage();
+    const withoutDuplicate = existingOrders.filter(
+      (entry) => String(entry?.requestId) !== String(mergedLastOrder.requestId)
+    );
+
+    writeOrderRequestsToStorage([mergedLastOrder, ...withoutDuplicate].slice(0, 20));
+
+    return mergedLastOrder;
+  } catch (error) {
+    console.error('Supabase order sync error:', error);
+    return getLastOrderRequest();
+  }
+}
+
+async function readOrderRequestsFromSource() {
+  if (LIVE_REQUESTS_ENABLED) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('requests')
+        .select('*')
+        .eq('restaurant_id', LIVE_RESTAURANT_ID)
+        .eq('type', 'order')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const liveOrders = Array.isArray(data)
+        ? data.map(mapLiveOrderRowToRequest).filter(Boolean)
+        : [];
+
+      writeOrderRequestsToStorage(liveOrders.slice(0, 20));
+      await syncLastOrderRequestFromSource();
+
+      return liveOrders;
+    } catch (error) {
+      console.error('Supabase order read error:', error);
+      return readOrderRequestsFromStorage();
+    }
+  }
+
+  return readOrderRequestsFromStorage();
+}
+
 async function writeOrderRequestToSource(orderRequest) {
   if (LIVE_REQUESTS_ENABLED) {
     const liveOrder = await insertLiveRequest({
@@ -3319,49 +3453,61 @@ function getOrderStatusLabel(status) {
 
   const labels = {
     fr: {
+      pending: 'En attente de confirmation',
       sent: 'Envoyée au restaurant',
       processing: 'En cours de traitement par le restaurant',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
       confirmed: 'Commande confirmée',
+      served: 'Commande servie',
+      not_served: 'Commande non servie',
       refused: 'Commande refusée',
       cancelled: 'Commande annulée'
     },
     es: {
+      pending: 'Pendiente de confirmación',
       sent: 'Enviado al restaurante',
       processing: 'En tratamiento por el restaurante',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
       confirmed: 'Pedido confirmado',
+      served: 'Pedido servido',
+      not_served: 'Pedido no servido',
       refused: 'Pedido rechazado',
       cancelled: 'Pedido cancelado'
     },
     en: {
+      pending: 'Awaiting confirmation',
       sent: 'Sent to the restaurant',
       processing: 'Being processed by the restaurant',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
       confirmed: 'Order confirmed',
+      served: 'Order served',
+      not_served: 'Order not served',
       refused: 'Order refused',
       cancelled: 'Order cancelled'
     },
     nl: {
+      pending: 'Wacht op bevestiging',
       sent: 'Verzonden naar het restaurant',
       processing: 'Wordt verwerkt door het restaurant',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
       confirmed: 'Bestelling bevestigd',
+      served: 'Bestelling geserveerd',
+      not_served: 'Bestelling niet geserveerd',
       refused: 'Bestelling geweigerd',
       cancelled: 'Bestelling geannuleerd'
     }
   };
 
   const langLabels = labels[currentLang] || labels.fr;
-  return langLabels[status] || langLabels.sent;
+  return langLabels[status] || langLabels.pending;
 }
 
 function renderLastOrderRequestCard() {
@@ -3474,12 +3620,15 @@ function renderLastOrderRequestCard() {
   const status = orderRequest.status || 'sent';
 
   const responseMessageByStatus = {
+    pending: texts.waiting,
     sent: texts.waiting,
     processing: texts.processing,
     modified: orderRequest.restaurantResponse?.message || texts.modified,
     accepted_by_client: texts.acceptedByClient,
     rejected_by_client: texts.rejectedByClient,
-    confirmed: texts.confirmed,
+    confirmed: orderRequest.restaurantResponse?.message || texts.confirmed,
+    served: orderRequest.restaurantResponse?.message || texts.confirmed,
+    not_served: orderRequest.restaurantResponse?.message || texts.cancelled,
     refused: orderRequest.restaurantResponse?.message || texts.refused,
     cancelled: orderRequest.restaurantResponse?.message || texts.cancelled
   };
@@ -3592,7 +3741,16 @@ function hasPendingClientBookingRequest() {
 function hasPendingClientOrderRequest() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest) return false;
-  return ['sent', 'processing'].includes(orderRequest.status || 'sent');
+
+  return [
+    'pending',
+    'sent',
+    'processing',
+    'modified',
+    'accepted_by_client',
+    'rejected_by_client',
+    'confirmed'
+  ].includes(orderRequest.status || 'pending');
 }
 
 function renderClientRequestRefreshPanel() {
@@ -3633,8 +3791,13 @@ function refreshClientRequestCards() {
 window.manualRefreshClientRequests = async function() {
   if (LIVE_REQUESTS_ENABLED) {
     bookingRequests = await fetchLiveRequestsByType('booking');
-  } else if (typeof readBookingRequestsFromStorage === 'function') {
-    bookingRequests = await readBookingRequestsFromStorage();
+    await fetchLiveRequestsByType('order');
+  } else {
+    if (typeof readBookingRequestsFromStorage === 'function') {
+      bookingRequests = await readBookingRequestsFromStorage();
+    }
+
+    readOrderRequestsFromStorage();
   }
 
   refreshClientRequestCards();
@@ -3675,7 +3838,7 @@ function startClientRequestAutoRefresh() {
 
   if (document.hidden) return;
   if (!orderMode && !bookingMode) return;
-  if (!hasPendingClientBookingRequest()) return;
+  if (!hasPendingClientBookingRequest() && !hasPendingClientOrderRequest()) return;
 
   clientRequestAutoRefreshTimer = setInterval(async () => {
     if (bookingMode) {
@@ -3684,6 +3847,14 @@ function startClientRequestAutoRefresh() {
         : (typeof readBookingRequestsFromStorage === 'function'
             ? await readBookingRequestsFromStorage()
             : bookingRequests);
+    }
+
+    if (orderMode) {
+      if (LIVE_REQUESTS_ENABLED) {
+        await fetchLiveRequestsByType('order');
+      } else {
+        readOrderRequestsFromStorage();
+      }
     }
 
     refreshClientRequestCards();

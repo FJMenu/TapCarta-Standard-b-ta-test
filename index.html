@@ -376,37 +376,38 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
 
     .tapcarta-public-signature {
       position: fixed;
-      top: 82px;
-      right: 20px;
-      z-index: 45;
-      width: min(230px, calc(100vw - 24px));
-      padding: 10px 12px;
-      border: 1px solid rgba(242, 199, 68, 0.22);
-      border-radius: 16px;
-      background: rgba(15, 15, 15, 0.82);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      top: 92px;
+      right: 28px;
+      z-index: 42;
+      width: min(210px, calc(100vw - 24px));
+      padding: 7px 8px 8px;
+      border: 1px solid rgba(242, 199, 68, 0.12);
+      border-radius: 10px;
+      background: rgba(6, 6, 6, 0.48);
+      box-shadow: none;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       text-align: center;
+      opacity: 0.9;
     }
 
     .tapcarta-public-logo {
       display: block;
-      width: 158px;
+      width: 132px;
       max-width: 100%;
       height: auto;
-      margin: 0 auto 4px;
+      margin: 0 auto 3px;
     }
 
     .tapcarta-public-text {
-      font-size: 0.68rem;
-      line-height: 1.25;
-      color: rgba(250, 246, 238, 0.66);
-      letter-spacing: 0.03em;
+      font-size: 0.62rem;
+      line-height: 1.2;
+      color: rgba(250, 246, 238, 0.52);
+      letter-spacing: 0.02em;
     }
 
     .tapcarta-public-version {
-      color: #F2C744;
+      color: rgba(242, 199, 68, 0.9);
       font-weight: 700;
       white-space: nowrap;
     }
@@ -731,21 +732,22 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       }
 
       .tapcarta-public-signature {
-        top: 70px;
-        left: 10px;
-        right: 10px;
-        width: auto;
-        max-width: none;
-        padding: 8px 10px;
+        top: 76px;
+        left: auto;
+        right: 14px;
+        width: 168px;
+        max-width: calc(100vw - 28px);
+        padding: 6px 7px 7px;
+        border-radius: 10px;
       }
 
       .tapcarta-public-logo {
-        width: 145px;
+        width: 118px;
         margin-bottom: 2px;
       }
 
       .tapcarta-public-text {
-        font-size: 0.64rem;
+        font-size: 0.58rem;
       }
 
       .lang-btn {
@@ -839,9 +841,7 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       alt="TapCarta"
       loading="eager"
     >
-    <div class="tapcarta-public-text">
-      Menu digital interactif · Version <span id="tapcarta-public-version" class="tapcarta-public-version"></span>
-    </div>
+    <div id="tapcarta-public-text" class="tapcarta-public-text"></div>
   </div>
 
   <div id="app-wrapper" class="w-full min-h-screen bg-dark text-cream">
@@ -1812,10 +1812,41 @@ function persistClientActiveView() {
       return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     }
 
+    function getTapCartaPublicSignatureText() {
+      const texts = {
+        fr: 'Menu digital interactif',
+        es: 'Menú digital interactivo',
+        en: 'Interactive digital menu',
+        nl: 'Interactief digitaal menu'
+      };
+
+      const versionLabels = {
+        fr: 'Version',
+        es: 'Versión',
+        en: 'Version',
+        nl: 'Versie'
+      };
+
+      const label = texts[currentLang] || texts.fr;
+      const versionLabel = versionLabels[currentLang] || versionLabels.fr;
+
+      return `${label} · ${versionLabel} <span class="tapcarta-public-version">${APP_VERSION}</span>`;
+    }
+
+    function updateTapCartaPublicSignature() {
+      const tapCartaPublicText = document.getElementById('tapcarta-public-text');
+
+      if (tapCartaPublicText) {
+        tapCartaPublicText.innerHTML = getTapCartaPublicSignatureText();
+      }
+    }
+
     function updateLangButtons() {
       document.querySelectorAll('.lang-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.lang === currentLang);
       });
+
+      updateTapCartaPublicSignature();
     }
 
     function updateInstallUI() {
@@ -5450,7 +5481,6 @@ const manifestLink = document.getElementById('manifest-link');
 const appleTouchIconLink = document.getElementById('apple-touch-icon-link');
 const faviconLink = document.getElementById('favicon-link');
 const tapCartaPublicLogo = document.getElementById('tapcarta-public-logo');
-const tapCartaPublicVersion = document.getElementById('tapcarta-public-version');
 
 if (manifestLink) {
   manifestLink.href = MANIFEST_URL;
@@ -5468,9 +5498,7 @@ if (tapCartaPublicLogo) {
   tapCartaPublicLogo.src = TAPCARTA_PUBLIC_LOGO_URL;
 }
 
-if (tapCartaPublicVersion) {
-  tapCartaPublicVersion.textContent = APP_VERSION;
-}
+updateTapCartaPublicSignature();
 
   const reloadingForFreshVersion = ensureFreshHtmlVersion();
   if (reloadingForFreshVersion) return;

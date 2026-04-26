@@ -3682,7 +3682,8 @@ function getOrderStatusLabel(status) {
       served: 'Commande servie',
       not_served: 'Commande non servie',
       refused: 'Commande refusée',
-      cancelled: 'Commande annulée'
+      cancelled: 'Commande annulée',
+      service_unknown_no_action: 'Commande clôturée'
     },
     es: {
       pending: 'Pendiente de confirmación',
@@ -3695,7 +3696,8 @@ function getOrderStatusLabel(status) {
       served: 'Pedido servido',
       not_served: 'Pedido no servido',
       refused: 'Pedido rechazado',
-      cancelled: 'Pedido cancelado'
+      cancelled: 'Pedido cancelado',
+      service_unknown_no_action: 'Pedido cerrado'
     },
     en: {
       pending: 'Awaiting confirmation',
@@ -3708,7 +3710,8 @@ function getOrderStatusLabel(status) {
       served: 'Order served',
       not_served: 'Order not served',
       refused: 'Order refused',
-      cancelled: 'Order cancelled'
+      cancelled: 'Order cancelled',
+      service_unknown_no_action: 'Order closed'
     },
     nl: {
       pending: 'Wacht op bevestiging',
@@ -3721,7 +3724,8 @@ function getOrderStatusLabel(status) {
       served: 'Bestelling geserveerd',
       not_served: 'Bestelling niet geserveerd',
       refused: 'Bestelling geweigerd',
-      cancelled: 'Bestelling geannuleerd'
+      cancelled: 'Bestelling geannuleerd',
+      service_unknown_no_action: 'Bestelling afgesloten'
     }
   };
 
@@ -3895,23 +3899,29 @@ function renderClientOrderHistoryItem(orderRequest) {
   const status = orderRequest.status || 'pending';
   const orderItems = Array.isArray(orderRequest.order?.items) ? orderRequest.order.items : [];
   const totalAmount = Number(orderRequest.order?.totalAmount || 0);
-  const statusLabel = isFinalClientOrderStatus(status)
-    ? getOrderStatusLabel(status)
+  const statusLabel = getOrderStatusLabel(status);
+
+  const statusClass = isFinalClientOrderStatus(status)
+    ? (
+        status === 'served'
+          ? 'text-emerald-200'
+          : status === 'service_unknown_no_action'
+            ? 'text-gold'
+            : 'text-red-200'
+      )
     : (
-        currentLang === 'es'
-          ? 'Pedido cerrado'
-          : currentLang === 'en'
-            ? 'Order closed'
-            : currentLang === 'nl'
-              ? 'Bestelling afgesloten'
-              : 'Commande clôturée'
+        status === 'confirmed' || status === 'accepted_by_client'
+          ? 'text-emerald-200'
+          : status === 'processing' || status === 'modified'
+            ? 'text-sky-100'
+            : 'text-amber-100'
       );
 
   return `
     <div class="rounded-2xl border border-gold/20 bg-black/20 p-4">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div class="text-sm font-semibold text-gold">${escapeBookingHtml(statusLabel)}</div>
+          <div class="text-sm font-semibold ${statusClass}">${escapeBookingHtml(statusLabel)}</div>
           <div class="mt-1 text-xs text-cream/65">
             ${escapeBookingHtml(formatBookingDateForDisplay(orderRequest.order?.date || ''))}
             · ${escapeBookingHtml(orderRequest.order?.time || '-')}
@@ -4213,8 +4223,9 @@ function renderLastOrderRequestCard() {
 
   const cardTexts = {
     fr: {
-      title: 'Suivi de votre commande',
+      title: 'Ma commande',
       status: 'Statut',
+      view: 'Voir',
       reference: 'Référence',
       name: 'Nom',
       phone: 'Téléphone',
@@ -4224,19 +4235,24 @@ function renderLastOrderRequestCard() {
       updatedAt: 'Dernière mise à jour',
       note: 'Remarque',
       items: 'Articles',
+      total: 'Total',
       refusalReason: 'Motif du refus',
-      waiting: 'Votre commande a bien été transmise. La réponse du restaurant apparaîtra ici.',
+      waiting: 'Votre commande a bien été transmise. Elle est en attente de confirmation par le restaurant.',
       processing: 'Le restaurant a consulté votre commande et la traite actuellement.',
       modified: 'Le restaurant vous propose une modification de votre commande.',
       acceptedByClient: 'Vous avez accepté la modification proposée. Le restaurant doit maintenant la traiter.',
       rejectedByClient: 'Vous avez refusé la modification proposée. Le restaurant doit maintenant la traiter.',
       confirmed: 'Le restaurant a confirmé votre commande.',
+      served: 'Votre commande a été servie.',
+      notServed: 'Votre commande est indiquée comme non servie.',
       refused: 'Le restaurant a refusé votre commande.',
-      cancelled: 'Le restaurant a annulé votre commande.'
+      cancelled: 'Le restaurant a annulé votre commande.',
+      closed: 'Cette commande est clôturée.'
     },
     es: {
-      title: 'Seguimiento de tu pedido',
+      title: 'Mi pedido',
       status: 'Estado',
+      view: 'Ver',
       reference: 'Referencia',
       name: 'Nombre',
       phone: 'Teléfono',
@@ -4246,19 +4262,24 @@ function renderLastOrderRequestCard() {
       updatedAt: 'Última actualización',
       note: 'Observación',
       items: 'Artículos',
+      total: 'Total',
       refusalReason: 'Motivo del rechazo',
-      waiting: 'Tu pedido ha sido transmitido correctamente. La respuesta del restaurante aparecerá aquí.',
+      waiting: 'Tu pedido ha sido transmitido correctamente. Está pendiente de confirmación por el restaurante.',
       processing: 'El restaurante ha consultado tu pedido y lo está gestionando.',
       modified: 'El restaurante te propone una modificación de tu pedido.',
       acceptedByClient: 'Has aceptado la modificación propuesta. El restaurante debe gestionarla ahora.',
       rejectedByClient: 'Has rechazado la modificación propuesta. El restaurante debe gestionarla ahora.',
       confirmed: 'El restaurante ha confirmado tu pedido.',
+      served: 'Tu pedido ha sido servido.',
+      notServed: 'Tu pedido aparece como no servido.',
       refused: 'El restaurante ha rechazado tu pedido.',
-      cancelled: 'El restaurante ha cancelado tu pedido.'
+      cancelled: 'El restaurante ha cancelado tu pedido.',
+      closed: 'Este pedido está cerrado.'
     },
     en: {
-      title: 'Your order tracking',
+      title: 'My order',
       status: 'Status',
+      view: 'View',
       reference: 'Reference',
       name: 'Name',
       phone: 'Phone',
@@ -4268,19 +4289,24 @@ function renderLastOrderRequestCard() {
       updatedAt: 'Last update',
       note: 'Note',
       items: 'Items',
+      total: 'Total',
       refusalReason: 'Reason for refusal',
-      waiting: 'Your order has been transmitted. The restaurant response will appear here.',
+      waiting: 'Your order has been transmitted. It is awaiting confirmation from the restaurant.',
       processing: 'The restaurant has opened your order and is currently processing it.',
       modified: 'The restaurant proposes a modification to your order.',
       acceptedByClient: 'You accepted the proposed modification. The restaurant must now process it.',
       rejectedByClient: 'You rejected the proposed modification. The restaurant must now process it.',
       confirmed: 'The restaurant has confirmed your order.',
+      served: 'Your order has been served.',
+      notServed: 'Your order is marked as not served.',
       refused: 'The restaurant has refused your order.',
-      cancelled: 'The restaurant has cancelled your order.'
+      cancelled: 'The restaurant has cancelled your order.',
+      closed: 'This order is closed.'
     },
     nl: {
-      title: 'Opvolging van je bestelling',
+      title: 'Mijn bestelling',
       status: 'Status',
+      view: 'Bekijken',
       reference: 'Referentie',
       name: 'Naam',
       phone: 'Telefoon',
@@ -4290,22 +4316,28 @@ function renderLastOrderRequestCard() {
       updatedAt: 'Laatste update',
       note: 'Opmerking',
       items: 'Artikelen',
+      total: 'Totaal',
       refusalReason: 'Reden van weigering',
-      waiting: 'Je bestelling is goed doorgestuurd. Het antwoord van het restaurant verschijnt hier.',
+      waiting: 'Je bestelling is goed doorgestuurd. Ze wacht op bevestiging door het restaurant.',
       processing: 'Het restaurant heeft je bestelling geopend en verwerkt ze momenteel.',
       modified: 'Het restaurant stelt een wijziging van je bestelling voor.',
       acceptedByClient: 'U hebt de voorgestelde wijziging aanvaard. Het restaurant moet die nu verwerken.',
       rejectedByClient: 'U hebt de voorgestelde wijziging geweigerd. Het restaurant moet die nu verwerken.',
       confirmed: 'Het restaurant heeft je bestelling bevestigd.',
+      served: 'Je bestelling werd geserveerd.',
+      notServed: 'Je bestelling staat aangeduid als niet geserveerd.',
       refused: 'Het restaurant heeft je bestelling geweigerd.',
-      cancelled: 'Het restaurant heeft je bestelling geannuleerd.'
+      cancelled: 'Het restaurant heeft je bestelling geannuleerd.',
+      closed: 'Deze bestelling is afgesloten.'
     }
   };
 
   const texts = cardTexts[currentLang] || cardTexts.fr;
   const orderItems = Array.isArray(orderRequest.order.items) ? orderRequest.order.items : [];
   const proposedTime = orderRequest.restaurantResponse?.proposal?.proposedTime || '';
-  const status = orderRequest.status || 'sent';
+  const status = orderRequest.status || 'pending';
+  const totalAmount = Number(orderRequest.order.totalAmount || 0);
+  const isFinalStatus = isFinalClientOrderStatus(status);
 
   const responseMessageByStatus = {
     pending: texts.waiting,
@@ -4315,67 +4347,83 @@ function renderLastOrderRequestCard() {
     accepted_by_client: texts.acceptedByClient,
     rejected_by_client: texts.rejectedByClient,
     confirmed: orderRequest.restaurantResponse?.message || texts.confirmed,
-    served: orderRequest.restaurantResponse?.message || texts.confirmed,
-    not_served: orderRequest.restaurantResponse?.message || texts.cancelled,
+    served: orderRequest.restaurantResponse?.message || texts.served,
+    not_served: orderRequest.restaurantResponse?.message || texts.notServed,
     refused: orderRequest.restaurantResponse?.message || texts.refused,
-    cancelled: orderRequest.restaurantResponse?.message || texts.cancelled
+    cancelled: orderRequest.restaurantResponse?.message || texts.cancelled,
+    service_unknown_no_action: texts.closed
   };
 
-  const cardClass = status === 'confirmed'
-    ? 'border-emerald-400/35 bg-emerald-500/10'
-    : status === 'modified'
-      ? 'border-sky-400/35 bg-sky-500/10'
-      : status === 'accepted_by_client'
-        ? 'border-emerald-400/35 bg-emerald-500/10'
-        : status === 'rejected_by_client' || status === 'refused' || status === 'cancelled'
-          ? 'border-red-400/35 bg-red-500/10'
-          : 'border-gold/30 bg-black/20';
+  const statusUi = status === 'confirmed' || status === 'accepted_by_client' || status === 'served'
+    ? {
+        card: 'border-emerald-400/35 bg-emerald-500/10',
+        badge: 'border-emerald-300/35 bg-emerald-500/15 text-emerald-200',
+        message: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100'
+      }
+    : status === 'processing' || status === 'modified'
+      ? {
+          card: 'border-sky-400/35 bg-sky-500/10',
+          badge: 'border-sky-300/35 bg-sky-500/15 text-sky-100',
+          message: 'border-sky-300/20 bg-sky-500/10 text-sky-100'
+        }
+      : status === 'rejected_by_client' || status === 'refused' || status === 'cancelled' || status === 'not_served'
+        ? {
+            card: 'border-red-400/35 bg-red-500/10',
+            badge: 'border-red-300/35 bg-red-500/15 text-red-200',
+            message: 'border-red-300/20 bg-red-500/10 text-red-100'
+          }
+        : {
+            card: 'border-amber-300/35 bg-amber-500/10',
+            badge: 'border-amber-300/35 bg-amber-500/15 text-amber-100',
+            message: 'border-amber-300/20 bg-amber-500/10 text-amber-100'
+          };
 
   return `
-    <div id="client-order-card" class="mt-4 rounded-2xl border ${cardClass} p-4">
+    <div id="client-order-card" class="mt-4 rounded-2xl border ${statusUi.card} p-4">
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div class="text-xs font-semibold uppercase tracking-wide text-gold/85">
             ${texts.title}
           </div>
-          <div class="mt-2 text-sm text-cream/90">
-            <span class="font-semibold text-gold/90">${texts.status} :</span>
-            ${escapeBookingHtml(getOrderStatusLabel(status))}
+
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span class="text-sm font-semibold text-gold/90">${texts.status} :</span>
+            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusUi.badge}">
+              ${escapeBookingHtml(getOrderStatusLabel(status))}
+            </span>
           </div>
         </div>
 
-        ${status === 'modified' ? `
-          <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2">
+          <button onclick="openCurrentOrderModal()" class="btn-action px-3 py-2 rounded-xl border border-gold/25 bg-black/20 text-xs font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
+            ${texts.view}
+          </button>
+
+          ${status === 'modified' ? `
             <button onclick="acceptLastOrderModification()" class="btn-action px-3 py-2 rounded-xl border border-emerald-400/40 bg-emerald-500/10 text-xs font-semibold text-cream/90 hover:border-emerald-300/70 hover:bg-emerald-500/20 transition-all">
               ${tDecision.acceptButton}
             </button>
             <button onclick="rejectLastOrderModification()" class="btn-action px-3 py-2 rounded-xl border border-red-400/40 bg-red-500/10 text-xs font-semibold text-cream/90 hover:border-red-300/70 hover:bg-red-500/20 transition-all">
               ${tDecision.rejectButton}
             </button>
-          </div>
-        ` : ''}
+          ` : ''}
+        </div>
       </div>
 
+      ${!isFinalStatus ? renderClientRequestRefreshPanel() : ''}
+
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-cream/80">
-        <div><span class="text-gold/85 font-semibold">${texts.reference} :</span> ${escapeBookingHtml(orderRequest.requestId || '-')}</div>
-        <div><span class="text-gold/85 font-semibold">${texts.updatedAt} :</span> ${escapeBookingHtml(formatBookingDateTimeForDisplay(orderRequest.updatedAt || orderRequest.createdAt || ''))}</div>
         <div><span class="text-gold/85 font-semibold">${texts.name} :</span> ${escapeBookingHtml(orderRequest.customer.name || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${texts.phone} :</span> ${escapeBookingHtml(orderRequest.customer.phone || '-')}</div>
         <div><span class="text-gold/85 font-semibold">${texts.date} :</span> ${escapeBookingHtml(formatBookingDateForDisplay(orderRequest.order.date || ''))}</div>
         <div><span class="text-gold/85 font-semibold">${texts.time} :</span> ${escapeBookingHtml(orderRequest.order.time || '-')}</div>
+        ${totalAmount ? `<div><span class="text-gold/85 font-semibold">${texts.total} :</span> ${totalAmount.toFixed(2).replace('.', ',')} €</div>` : ''}
         ${proposedTime ? `<div><span class="text-gold/85 font-semibold">${texts.proposedTime} :</span> ${escapeBookingHtml(proposedTime)}</div>` : ''}
       </div>
 
-      <div class="mt-3 rounded-xl border border-gold/15 bg-black/15 px-3 py-3 text-sm text-cream/80">
+      <div class="mt-3 rounded-xl border ${statusUi.message} px-3 py-3 text-sm text-cream/90">
         ${escapeBookingHtml(responseMessageByStatus[status] || texts.waiting)}
       </div>
-
-      ${orderRequest.order.note ? `
-        <div class="mt-3 text-sm text-cream/80">
-          <span class="text-gold/85 font-semibold">${texts.note} :</span>
-          ${escapeBookingHtml(orderRequest.order.note)}
-        </div>
-      ` : ''}
 
       ${orderItems.length ? `
         <div class="mt-3 text-sm text-cream/80">
@@ -4384,7 +4432,21 @@ function renderLastOrderRequestCard() {
         </div>
       ` : ''}
 
-      ${['refused', 'cancelled', 'rejected_by_client'].includes(status) && orderRequest.restaurantResponse?.reason ? `
+      ${orderRequest.order.note ? `
+        <div class="mt-3 text-sm text-cream/80">
+          <span class="text-gold/85 font-semibold">${texts.note} :</span>
+          ${escapeBookingHtml(orderRequest.order.note)}
+        </div>
+      ` : ''}
+
+      ${orderRequest.updatedAt || orderRequest.createdAt ? `
+        <div class="mt-3 text-sm text-cream/70">
+          <span class="text-gold/85 font-semibold">${texts.updatedAt} :</span>
+          ${escapeBookingHtml(formatBookingDateTimeForDisplay(orderRequest.updatedAt || orderRequest.createdAt || ''))}
+        </div>
+      ` : ''}
+
+      ${['refused', 'cancelled', 'rejected_by_client', 'not_served'].includes(status) && orderRequest.restaurantResponse?.reason ? `
         <div class="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-3 text-sm text-cream/90">
           <span class="text-red-200 font-semibold">${texts.refusalReason} :</span>
           ${escapeBookingHtml(orderRequest.restaurantResponse.reason)}
@@ -4462,11 +4524,11 @@ function refreshClientRequestCards() {
   const bookingSlot = document.getElementById('client-booking-card-slot');
 
   if (orderSlot) {
-    orderSlot.innerHTML = '';
+    orderSlot.innerHTML = renderLastOrderRequestCard();
   }
 
   if (bookingSlot) {
-    bookingSlot.innerHTML = '';
+    bookingSlot.innerHTML = renderLastBookingRequestCard();
   }
 
   if (window.lucide) {

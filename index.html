@@ -3534,7 +3534,12 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
 
   const liveRequestId = updatedOrderRequest.liveRequestId || updatedOrderRequest.requestId || null;
 
-  if (LIVE_REQUESTS_ENABLED && liveRequestId) {
+  if (LIVE_REQUESTS_ENABLED) {
+    if (!liveRequestId) {
+      console.warn('Supabase order update impossible : aucun ID live disponible.');
+      return null;
+    }
+
     try {
       const { data, error } = await supabaseClient
         .from('requests')
@@ -3553,7 +3558,7 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
       if (!data) {
         console.warn('Supabase order update: aucune ligne mise à jour pour id =', liveRequestId);
         alert(`Supabase n'a mis à jour aucune commande.\nID utilisé : ${liveRequestId}`);
-        return updatedOrderRequest;
+        return null;
       }
 
       const syncedRequest = mapLiveOrderRowToRequest(data) || updatedOrderRequest;
@@ -3585,7 +3590,7 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
     } catch (error) {
       console.error('Supabase order update error:', error);
       alert(`Erreur Supabase update commande : ${error?.message || error}`);
-      return updatedOrderRequest;
+      return null;
     }
   }
 

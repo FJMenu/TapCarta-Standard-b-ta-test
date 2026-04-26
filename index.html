@@ -10,6 +10,8 @@
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
+let clientOrderSyncUnavailable = false;
+let clientBookingSyncUnavailable = false;
 
 function normalizeRequestItems(items) {
   if (!Array.isArray(items)) return [];
@@ -2157,30 +2159,7 @@ async function readBookingRequestsFromStorage() {
 
       writeBookingRequestsToStorage(liveRequests.slice(0, 20));
 
-      try {
-        const rawLastBooking = localStorage.getItem(getLastBookingStorageKey());
-        const parsedLastBooking = rawLastBooking ? JSON.parse(rawLastBooking) : null;
-        const liveRequestId = parsedLastBooking?.liveRequestId || parsedLastBooking?.requestId || null;
-
-        if (liveRequestId) {
-          const liveRow = await fetchLiveRequestById(liveRequestId, 'booking');
-          const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
-
-          if (syncedLastBooking) {
-            const mergedLastBooking = {
-              ...syncedLastBooking,
-              restaurantResponse: {
-                ...(syncedLastBooking.restaurantResponse || {}),
-                ...(parsedLastBooking?.restaurantResponse || {})
-              }
-            };
-
-            localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedLastBooking));
-          }
-        }
-      } catch (syncError) {
-        console.error('Supabase booking sync error:', syncError);
-      }
+      await syncLastBookingRequestFromSource();
 
       return liveRequests;
     } catch (error) {
@@ -2250,6 +2229,50 @@ function getLastBookingRequest() {
     const raw = localStorage.getItem(getLastBookingStorageKey());
     return raw ? JSON.parse(raw) : null;
   } catch (error) {
+    return null;
+  }
+}
+
+async function syncLastBookingRequestFromSource() {
+  if (!LIVE_REQUESTS_ENABLED) {
+    clientBookingSyncUnavailable = false;
+    return getLastBookingRequest();
+  }
+
+  try {
+    const rawLastBooking = localStorage.getItem(getLastBookingStorageKey());
+    const parsedLastBooking = rawLastBooking ? JSON.parse(rawLastBooking) : null;
+    const liveRequestId = parsedLastBooking?.liveRequestId || parsedLastBooking?.requestId || null;
+
+    if (!liveRequestId) {
+      clientBookingSyncUnavailable = false;
+      return null;
+    }
+
+    const liveRow = await fetchLiveRequestById(liveRequestId, 'booking');
+    const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
+
+    if (!syncedLastBooking) {
+      clientBookingSyncUnavailable = false;
+      localStorage.removeItem(getLastBookingStorageKey());
+      return null;
+    }
+
+    const mergedLastBooking = {
+      ...syncedLastBooking,
+      restaurantResponse: {
+        ...(syncedLastBooking.restaurantResponse || {}),
+        ...(parsedLastBooking?.restaurantResponse || {})
+      }
+    };
+
+    localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedLastBooking));
+
+    clientBookingSyncUnavailable = false;
+    return mergedLastBooking;
+  } catch (error) {
+    console.error('Supabase booking sync error:', error);
+    clientBookingSyncUnavailable = true;
     return null;
   }
 }
@@ -3409,6 +3432,7 @@ function writeOrderRequestsToStorage(requests) {
 
 async function syncLastOrderRequestFromSource() {
   if (!LIVE_REQUESTS_ENABLED) {
+    clientOrderSyncUnavailable = false;
     return getLastOrderRequest();
   }
 
@@ -3418,6 +3442,7 @@ async function syncLastOrderRequestFromSource() {
     const liveRequestId = parsedLastOrder?.liveRequestId || parsedLastOrder?.requestId || null;
 
     if (!liveRequestId) {
+      clientOrderSyncUnavailable = false;
       return null;
     }
 
@@ -3425,6 +3450,8 @@ async function syncLastOrderRequestFromSource() {
     const syncedLastOrder = mapLiveOrderRowToRequest(liveRow);
 
     if (!syncedLastOrder) {
+      clientOrderSyncUnavailable = false;
+      localStorage.removeItem(getLastOrderStorageKey());
       return null;
     }
 
@@ -3445,9 +3472,11 @@ async function syncLastOrderRequestFromSource() {
 
     writeOrderRequestsToStorage([mergedLastOrder, ...withoutDuplicate].slice(0, 20));
 
+    clientOrderSyncUnavailable = false;
     return mergedLastOrder;
   } catch (error) {
     console.error('Supabase order sync error:', error);
+    clientOrderSyncUnavailable = true;
     return null;
   }
 }
@@ -4632,6 +4661,42 @@ function renderClientRequestRefreshPanel() {
   `;
 }
 
+function renderClientSyncUnavailableCard(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'Suivi de commande' : 'Suivi de réservation',
+      message: 'Mise à jour temporairement indisponible. Veuillez réessayer dans quelques instants.'
+    },
+    es: {
+      title: isOrder ? 'Seguimiento del pedido' : 'Seguimiento de la reserva',
+      message: 'Actualización temporalmente no disponible. Inténtelo de nuevo en unos instantes.'
+    },
+    en: {
+      title: isOrder ? 'Order tracking' : 'Booking tracking',
+      message: 'Update temporarily unavailable. Please try again in a moment.'
+    },
+    nl: {
+      title: isOrder ? 'Bestelling opvolgen' : 'Reservatie opvolgen',
+      message: 'Update tijdelijk niet beschikbaar. Probeer het over enkele ogenblikken opnieuw.'
+    }
+  };
+
+  const t = texts[currentLang] || texts.fr;
+
+  return `
+    <div class="mt-4 rounded-2xl border border-amber-300/35 bg-amber-500/10 p-4">
+      <div class="text-sm font-semibold text-amber-100">${escapeBookingHtml(t.title)}</div>
+      <div class="mt-2 text-sm text-cream/80">${escapeBookingHtml(t.message)}</div>
+      <button onclick="manualRefreshClientRequests()" class="btn-action mt-3 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gold/35 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
+        <i data-lucide="refresh-cw" class="w-4 h-4 text-gold"></i>
+        <span>OK / Refresh</span>
+      </button>
+    </div>
+  `;
+}
+
 async function refreshClientRequestCards() {
   if (LIVE_REQUESTS_ENABLED) {
     try {
@@ -4639,6 +4704,8 @@ async function refreshClientRequestCards() {
       await readBookingRequestsFromStorage();
     } catch (error) {
       console.error('Supabase client cards refresh error:', error);
+      clientOrderSyncUnavailable = true;
+      clientBookingSyncUnavailable = true;
     }
   }
 
@@ -4646,11 +4713,15 @@ async function refreshClientRequestCards() {
   const bookingSlot = document.getElementById('client-booking-card-slot');
 
   if (orderSlot) {
-    orderSlot.innerHTML = renderLastOrderRequestCard();
+    orderSlot.innerHTML = clientOrderSyncUnavailable
+      ? renderClientSyncUnavailableCard('order')
+      : renderLastOrderRequestCard();
   }
 
   if (bookingSlot) {
-    bookingSlot.innerHTML = renderLastBookingRequestCard();
+    bookingSlot.innerHTML = clientBookingSyncUnavailable
+      ? renderClientSyncUnavailableCard('booking')
+      : renderLastBookingRequestCard();
   }
 
   if (window.lucide) {

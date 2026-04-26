@@ -2253,15 +2253,17 @@ function getLastBookingRequest() {
     return null;
   }
 }
-
 async function updateStoredBookingRequest(updatedRequest) {
   if (!updatedRequest || !updatedRequest.requestId) return null;
 
-  localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
-
   const liveRequestId = updatedRequest.liveRequestId || updatedRequest.requestId || null;
 
-  if (LIVE_REQUESTS_ENABLED && liveRequestId) {
+  if (LIVE_REQUESTS_ENABLED) {
+    if (!liveRequestId) {
+      console.warn('Supabase booking update impossible : aucun ID live disponible.');
+      return null;
+    }
+
     try {
       const { data, error } = await supabaseClient
         .from('requests')
@@ -2284,31 +2286,10 @@ async function updateStoredBookingRequest(updatedRequest) {
 
       if (error) throw error;
 
-      if (data) {
-        const syncedRequest = mapLiveBookingRowToRequest(data) || updatedRequest;
-        const mergedRequest = {
-          ...updatedRequest,
-          ...syncedRequest,
-          liveRequestId: syncedRequest.liveRequestId || liveRequestId,
-          requestId: syncedRequest.requestId || liveRequestId,
-          status: syncedRequest.status || updatedRequest.status,
-          updatedAt: syncedRequest.updatedAt || updatedRequest.updatedAt,
-          clientDecision: updatedRequest.clientDecision || '',
-          clientDecisionAt: updatedRequest.clientDecisionAt || '',
-          restaurantResponse: {
-            ...(syncedRequest.restaurantResponse || {}),
-            ...(updatedRequest.restaurantResponse || {})
-          }
-        };
-
-        localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedRequest));
-        return mergedRequest;
-      }
-
       if (!data) {
         console.warn('Supabase booking update: aucune ligne mise à jour pour id =', liveRequestId);
-        alert(`Supabase n'a mis à jour aucune ligne.\nID utilisé : ${liveRequestId}`);
-        return updatedRequest;
+        alert(`Supabase n'a mis à jour aucune réservation.\nID utilisé : ${liveRequestId}`);
+        return null;
       }
 
       const syncedRequest = mapLiveBookingRowToRequest(data) || updatedRequest;
@@ -2328,13 +2309,23 @@ async function updateStoredBookingRequest(updatedRequest) {
       };
 
       localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedRequest));
+
+      const existingRequests = await readBookingRequestsFromStorage();
+      const withoutDuplicate = existingRequests.filter(
+        (entry) => String(entry?.requestId) !== String(mergedRequest.requestId)
+      );
+
+      writeBookingRequestsToStorage([mergedRequest, ...withoutDuplicate].slice(0, 20));
+
       return mergedRequest;
     } catch (error) {
       console.error('Supabase booking update error:', error);
       alert(`Erreur Supabase update réservation : ${error?.message || error}`);
-      return updatedRequest;
+      return null;
     }
   }
+
+  localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(updatedRequest));
 
   const existingRequests = await readBookingRequestsFromStorage();
   const updatedRequests = existingRequests.map((request) =>
@@ -2723,7 +2714,6 @@ function getBookingClientDecisionTexts() {
     rejectedMessage: 'Votre demande a été annulée. Nous sommes désolés de ne pas avoir pu confirmer la réservation dans les conditions souhaitées. Le restaurant verra votre réponse et aura le plaisir de vous accueillir une prochaine fois.'
   };
 }
-
 window.acceptLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
@@ -2742,7 +2732,13 @@ window.acceptLastBookingModification = async function() {
     }
   };
 
-  await updateStoredBookingRequest(updatedRequest);
+  const syncedBookingRequest = await updateStoredBookingRequest(updatedRequest);
+
+  if (!syncedBookingRequest) {
+    return;
+  }
+
+  await readBookingRequestsFromStorage();
   renderMenu();
 
   setTimeout(() => {
@@ -2752,7 +2748,6 @@ window.acceptLastBookingModification = async function() {
     }
   }, 80);
 };
-
 window.rejectLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
@@ -2771,7 +2766,13 @@ window.rejectLastBookingModification = async function() {
     }
   };
 
-  await updateStoredBookingRequest(updatedRequest);
+  const syncedBookingRequest = await updateStoredBookingRequest(updatedRequest);
+
+  if (!syncedBookingRequest) {
+    return;
+  }
+
+  await readBookingRequestsFromStorage();
   renderMenu();
 
   setTimeout(() => {
@@ -2800,8 +2801,7 @@ function editLastBookingRequest() {
     }
   }, 80);
 }
-
-function cancelLastBookingRequest() {
+async function cancelLastBookingRequest() {
   const bookingRequest = getLastBookingRequest();
 
   if (!bookingRequest) return;
@@ -2819,11 +2819,17 @@ function cancelLastBookingRequest() {
     cancelledAt: new Date().toISOString()
   };
 
+  const syncedBookingRequest = await updateStoredBookingRequest(updatedRequest);
+
+  if (!syncedBookingRequest) {
+    return;
+  }
+
   if (editingBookingRequestId && editingBookingRequestId === bookingRequest.requestId) {
     editingBookingRequestId = null;
   }
 
-  updateStoredBookingRequest(updatedRequest);
+  await readBookingRequestsFromStorage();
   alert(tBooking.bookingCancelledAlert);
   renderMenu();
 }

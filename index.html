@@ -2823,11 +2823,40 @@ window.rejectLastBookingModification = async function() {
   }, 80);
 };
 
-function editLastBookingRequest() {
+async function editLastBookingRequest() {
+  if (LIVE_REQUESTS_ENABLED) {
+    const syncedBookingRequest = await syncLastBookingRequestFromSource();
+
+    if (clientBookingSyncUnavailable) {
+      await refreshClientRequestCards();
+      return;
+    }
+
+    if (!syncedBookingRequest) {
+      renderMenu();
+      return;
+    }
+  }
+
   const bookingRequest = getLastBookingRequest();
 
   if (!bookingRequest) return;
-  if (['cancelled', 'confirmed', 'refused', 'modified', 'accepted_by_client', 'rejected_by_client'].includes(bookingRequest.status || 'pending')) return;
+
+  if ([
+    'cancelled',
+    'cancelled_by_client',
+    'confirmed',
+    'refused',
+    'arrived',
+    'not_arrived',
+    'presence_unknown_no_action',
+    'modified',
+    'accepted_by_client',
+    'rejected_by_client'
+  ].includes(bookingRequest.status || 'pending')) {
+    renderMenu();
+    return;
+  }
 
   editingBookingRequestId = bookingRequest.requestId || null;
   loadBookingRequestIntoForm(bookingRequest);
@@ -3243,11 +3272,23 @@ async function validateAndSubmitBooking() {
   clearBookingFeedback();
 
   const existingBookingRequests = LIVE_REQUESTS_ENABLED
-  ? await fetchLiveRequestsByType('booking')
-  : await readBookingRequestsFromStorage();
+    ? await fetchLiveRequestsByType('booking')
+    : await readBookingRequestsFromStorage();
+
   const existingBookingRequest = editingBookingRequestId
     ? existingBookingRequests.find((request) => request && request.requestId === editingBookingRequestId)
     : null;
+
+  if (
+    LIVE_REQUESTS_ENABLED &&
+    existingBookingRequest &&
+    !['pending', 'processing'].includes(existingBookingRequest.status || 'pending')
+  ) {
+    editingBookingRequestId = null;
+    await readBookingRequestsFromStorage();
+    renderMenu();
+    return;
+  }
 
   const bookingRequest = buildBookingRequest();
 

@@ -2265,7 +2265,7 @@ async function updateStoredBookingRequest(updatedRequest) {
     }
 
     try {
-      const { data, error } = await supabaseClient
+      let query = supabaseClient
         .from('requests')
         .update({
           client_name: updatedRequest?.customer?.name || '',
@@ -2280,7 +2280,17 @@ async function updateStoredBookingRequest(updatedRequest) {
         })
         .eq('id', liveRequestId)
         .eq('restaurant_id', updatedRequest?.restaurantId || LIVE_RESTAURANT_ID)
-        .eq('type', 'booking')
+        .eq('type', 'booking');
+
+      if (['accepted_by_client', 'rejected_by_client'].includes(updatedRequest?.status || '')) {
+        query = query.eq('status', 'modified');
+      }
+
+      if ((updatedRequest?.status || '') === 'cancelled') {
+        query = query.in('status', ['pending', 'processing', 'modified']);
+      }
+
+      const { data, error } = await query
         .select('*')
         .maybeSingle();
 
@@ -2288,7 +2298,8 @@ async function updateStoredBookingRequest(updatedRequest) {
 
       if (!data) {
         console.warn('Supabase booking update: aucune ligne mise à jour pour id =', liveRequestId);
-        alert(`Supabase n'a mis à jour aucune réservation.\nID utilisé : ${liveRequestId}`);
+        alert(`Supabase n'a mis à jour aucune réservation.\nLa demande a peut-être déjà changé de statut côté restaurant.\nID utilisé : ${liveRequestId}`);
+        await readBookingRequestsFromStorage();
         return null;
       }
 
@@ -3551,7 +3562,7 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
     }
 
     try {
-      const { data, error } = await supabaseClient
+      let query = supabaseClient
         .from('requests')
         .update({
           status: updatedOrderRequest?.status || 'pending',
@@ -3559,7 +3570,13 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
         })
         .eq('id', liveRequestId)
         .eq('restaurant_id', updatedOrderRequest?.restaurantId || LIVE_RESTAURANT_ID)
-        .eq('type', 'order')
+        .eq('type', 'order');
+
+      if (['accepted_by_client', 'rejected_by_client'].includes(updatedOrderRequest?.status || '')) {
+        query = query.eq('status', 'modified');
+      }
+
+      const { data, error } = await query
         .select('*')
         .maybeSingle();
 
@@ -3567,7 +3584,8 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
 
       if (!data) {
         console.warn('Supabase order update: aucune ligne mise à jour pour id =', liveRequestId);
-        alert(`Supabase n'a mis à jour aucune commande.\nID utilisé : ${liveRequestId}`);
+        alert(`Supabase n'a mis à jour aucune commande.\nLa demande a peut-être déjà changé de statut côté restaurant.\nID utilisé : ${liveRequestId}`);
+        await syncLastOrderRequestFromSource();
         return null;
       }
 

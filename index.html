@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.3';
+    const APP_VERSION = 'V1.2.4';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1155,6 +1155,8 @@ reviewBackButton: 'Retour',
 reviewValidateButton: 'Valider la commande',
 reviewPendingMessage: 'Étape suivante prête : l’envoi réel de la commande sera branché ensuite.',
 continueAddingButton: 'Ajouter d’autres plats',
+modifyOrderButton: 'Modifier ma commande',
+editCustomerInfoButton: 'Modifier mes coordonnées',
 allergens: ['Gluten', 'Crustacés', 'Œufs', 'Poisson', 'Lait / lactose', 'Fruits à coque', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites', 'Mollusques'],
         items: {
           ailes_poulet: { name: 'Ailes de poulet', subtitle: 'croustillantes et moelleuses' },
@@ -1278,6 +1280,8 @@ reviewBackButton: 'Volver',
 reviewValidateButton: 'Validar el pedido',
 reviewPendingMessage: 'Siguiente etapa preparada: el envío real del pedido se conectará después.',
 continueAddingButton: 'Añadir más platos',
+modifyOrderButton: 'Modificar mi pedido',
+editCustomerInfoButton: 'Modificar mis datos',
 allergens: ['Gluten', 'Crustáceos', 'Huevos', 'Pescado', 'Leche / lactosa', 'Frutos secos', 'Apio', 'Mostaza', 'Sésamo', 'Sulfitos', 'Moluscos'],
         items: {
           ailes_poulet: { name: 'Alitas de pollo', subtitle: 'crujientes y tiernas' },
@@ -1402,6 +1406,8 @@ reviewBackButton: 'Back',
 reviewValidateButton: 'Validate order',
 reviewPendingMessage: 'Next step ready: the real order submission will be connected afterwards.',
 continueAddingButton: 'Add more dishes',
+modifyOrderButton: 'Modify my order',
+editCustomerInfoButton: 'Edit my details',
 allergens: ['Gluten', 'Crustaceans', 'Eggs', 'Fish', 'Milk / lactose', 'Nuts', 'Celery', 'Mustard', 'Sesame', 'Sulfites', 'Molluscs'],
         items: {
           ailes_poulet: { name: 'Chicken wings', subtitle: 'crispy and tender' },
@@ -1526,6 +1532,8 @@ reviewBackButton: 'Terug',
 reviewValidateButton: 'Bestelling valideren',
 reviewPendingMessage: 'Volgende stap is klaar: de echte verzending van de bestelling wordt later gekoppeld.',
 continueAddingButton: 'Meer gerechten toevoegen',
+modifyOrderButton: 'Mijn bestelling wijzigen',
+editCustomerInfoButton: 'Mijn gegevens wijzigen',
 allergens: ['Gluten', 'Schaaldieren', 'Eieren', 'Vis', 'Melk / lactose', 'Noten', 'Selderij', 'Mosterd', 'Sesam', 'Sulfieten', 'Weekdieren'],
         items: {
           ailes_poulet: { name: 'Kipvleugels', subtitle: 'knapperig en mals' },
@@ -4198,6 +4206,36 @@ function closeOrderReview() {
   renderMenu();
 }
 
+function modifyOrderItems() {
+  orderReviewOpen = false;
+  cartPanelOpen = false;
+  clearOrderFeedback();
+  renderMenu();
+
+  requestAnimationFrame(() => {
+    const target = document.getElementById('menu-start');
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
+}
+
+function editOrderCustomerInfo() {
+  orderReviewOpen = false;
+  cartPanelOpen = true;
+  clearOrderFeedback();
+  renderMenu();
+
+  requestAnimationFrame(() => {
+    const target = document.getElementById('order-customer-info');
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
+}
+
 async function validateOrderReview() {
   const feedbackTexts = getOrderFeedbackTexts();
 
@@ -5260,7 +5298,7 @@ ${!orderMode ? `
      ${cart.length ? `
         <div class="mt-4 pt-4 border-t border-gold/20">
           ${!orderReviewOpen ? `
-            <div class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.orderFormTitle}</div>
+            <div id="order-customer-info" class="text-sm font-semibold text-gold tracking-wide uppercase mb-3">${t.orderFormTitle}</div>
 
             <div class="space-y-3">
               <div>
@@ -5346,7 +5384,11 @@ ${!orderMode ? `
                 </div>
               </div>
 
-              <div class="mt-4 flex justify-end">
+              <div class="mt-4 flex flex-col sm:flex-row justify-end gap-3">
+                <button onclick="modifyOrderItems()" class="btn-action px-4 py-2 rounded-lg border border-gold/25 bg-black/20 text-sm font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
+                  ${t.modifyOrderButton}
+                </button>
+
                 <button onclick="openOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">
                   ${t.reviewOrderButton}
                 </button>
@@ -5411,8 +5453,12 @@ ${!orderMode ? `
               </div>
 
               <div class="flex flex-col sm:flex-row justify-end gap-3">
-                <button onclick="closeOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/25 bg-black/20 text-sm font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
-                  ${t.reviewBackButton}
+                <button onclick="modifyOrderItems()" class="btn-action px-4 py-2 rounded-lg border border-gold/25 bg-black/20 text-sm font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
+                  ${t.modifyOrderButton}
+                </button>
+
+                <button onclick="editOrderCustomerInfo()" class="btn-action px-4 py-2 rounded-lg border border-gold/25 bg-black/20 text-sm font-semibold text-cream/85 hover:border-gold/50 hover:bg-gold/10 transition-all">
+                  ${t.editCustomerInfoButton}
                 </button>
 
                 <button onclick="validateOrderReview()" class="btn-action px-4 py-2 rounded-lg border border-gold/40 bg-gold/10 text-sm font-semibold text-gold hover:bg-gold/15 transition-all">

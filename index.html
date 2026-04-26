@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.4';
+    const APP_VERSION = 'V1.2.5';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -3618,6 +3618,306 @@ function getOrderStatusLabel(status) {
   return langLabels[status] || langLabels.pending;
 }
 
+function getClientHistoryTexts() {
+  const texts = {
+    fr: {
+      currentOrder: 'Commande en cours',
+      lastOrders: 'Vos 5 dernières commandes',
+      currentBooking: 'Réservation en cours',
+      lastBookings: 'Vos 5 dernières réservations',
+      close: 'Fermer'
+    },
+    es: {
+      currentOrder: 'Pedido en curso',
+      lastOrders: 'Tus 5 últimos pedidos',
+      currentBooking: 'Reserva en curso',
+      lastBookings: 'Tus 5 últimas reservas',
+      close: 'Cerrar'
+    },
+    en: {
+      currentOrder: 'Current order',
+      lastOrders: 'Your last 5 orders',
+      currentBooking: 'Current booking',
+      lastBookings: 'Your last 5 bookings',
+      close: 'Close'
+    },
+    nl: {
+      currentOrder: 'Lopende bestelling',
+      lastOrders: 'Uw 5 laatste bestellingen',
+      currentBooking: 'Lopende reservatie',
+      lastBookings: 'Uw 5 laatste reservaties',
+      close: 'Sluiten'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function isFinalClientOrderStatus(status) {
+  return ['served', 'not_served', 'refused', 'cancelled', 'service_unknown_no_action'].includes(status || '');
+}
+
+function isFinalClientBookingStatus(status) {
+  return ['arrived', 'not_arrived', 'refused', 'cancelled', 'presence_unknown_no_action'].includes(status || '');
+}
+
+function openClientHistoryModal(title, contentHtml) {
+  const existingModal = document.getElementById('client-history-modal');
+
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  const tHistory = getClientHistoryTexts();
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-history-modal" class="fixed inset-0 z-[150] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-gold/25 bg-[#0D0D0D] shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+        <div class="sticky top-0 z-10 bg-[#0D0D0D]/95 backdrop-blur border-b border-white/8 px-5 py-4 flex items-center justify-between gap-4">
+          <h3 class="font-display text-xl font-bold text-gold">${title}</h3>
+
+          <button
+            type="button"
+            onclick="closeClientHistoryModal()"
+            class="btn-action px-4 py-2 rounded-xl border border-gold/25 text-sm font-semibold text-cream hover:bg-gold/10 transition-all"
+          >
+            ${tHistory.close}
+          </button>
+        </div>
+
+        <div class="p-5 space-y-4">
+          ${contentHtml}
+        </div>
+      </div>
+    </div>
+  `);
+
+  const modal = document.getElementById('client-history-modal');
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeClientHistoryModal();
+      }
+    });
+  }
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+function closeClientHistoryModal() {
+  const existingModal = document.getElementById('client-history-modal');
+
+  if (existingModal) {
+    existingModal.remove();
+  }
+}
+
+function renderClientHistoryEmptyText() {
+  if (currentLang === 'es') return 'Nada que mostrar por ahora.';
+  if (currentLang === 'en') return 'Nothing to show yet.';
+  if (currentLang === 'nl') return 'Nog niets om weer te geven.';
+  return 'Rien à afficher pour le moment.';
+}
+
+function openCurrentOrderModal() {
+  const tHistory = getClientHistoryTexts();
+  openClientHistoryModal(tHistory.currentOrder, renderLastOrderRequestCard());
+}
+
+function openLastOrdersModal() {
+  const tHistory = getClientHistoryTexts();
+  const orders = readOrderRequestsFromStorage()
+    .filter((orderRequest) => orderRequest && orderRequest.order && orderRequest.customer)
+    .slice(0, 5);
+
+  const contentHtml = orders.length
+    ? orders.map((orderRequest) => renderClientOrderHistoryItem(orderRequest)).join('')
+    : `<div class="text-sm text-cream/70">${renderClientHistoryEmptyText()}</div>`;
+
+  openClientHistoryModal(tHistory.lastOrders, contentHtml);
+}
+
+function openCurrentBookingModal() {
+  const tHistory = getClientHistoryTexts();
+  openClientHistoryModal(tHistory.currentBooking, renderLastBookingRequestCard());
+}
+
+function openLastBookingsModal() {
+  const tHistory = getClientHistoryTexts();
+
+  let bookings = [];
+
+  try {
+    const raw = localStorage.getItem(getBookingStorageKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    bookings = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    bookings = [];
+  }
+
+  const lastBooking = getLastBookingRequest();
+
+  if (lastBooking) {
+    bookings = [
+      lastBooking,
+      ...bookings.filter((bookingRequest) => String(bookingRequest?.requestId) !== String(lastBooking.requestId))
+    ];
+  }
+
+  bookings = bookings
+    .filter((bookingRequest) => bookingRequest && bookingRequest.booking && bookingRequest.customer)
+    .slice(0, 5);
+
+  const contentHtml = bookings.length
+    ? bookings.map((bookingRequest) => renderClientBookingHistoryItem(bookingRequest)).join('')
+    : `<div class="text-sm text-cream/70">${renderClientHistoryEmptyText()}</div>`;
+
+  openClientHistoryModal(tHistory.lastBookings, contentHtml);
+}
+
+function renderClientOrderHistoryItem(orderRequest) {
+  const status = orderRequest.status || 'pending';
+  const orderItems = Array.isArray(orderRequest.order?.items) ? orderRequest.order.items : [];
+  const totalAmount = Number(orderRequest.order?.totalAmount || 0);
+  const statusLabel = isFinalClientOrderStatus(status)
+    ? getOrderStatusLabel(status)
+    : (
+        currentLang === 'es'
+          ? 'Pedido cerrado'
+          : currentLang === 'en'
+            ? 'Order closed'
+            : currentLang === 'nl'
+              ? 'Bestelling afgesloten'
+              : 'Commande clôturée'
+      );
+
+  return `
+    <div class="rounded-2xl border border-gold/20 bg-black/20 p-4">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div class="text-sm font-semibold text-gold">${escapeBookingHtml(statusLabel)}</div>
+          <div class="mt-1 text-xs text-cream/65">
+            ${escapeBookingHtml(formatBookingDateForDisplay(orderRequest.order?.date || ''))}
+            · ${escapeBookingHtml(orderRequest.order?.time || '-')}
+          </div>
+        </div>
+
+        ${totalAmount ? `
+          <div class="text-sm font-bold text-gold">
+            ${totalAmount.toFixed(2).replace('.', ',')} €
+          </div>
+        ` : ''}
+      </div>
+
+      ${orderItems.length ? `
+        <div class="mt-3 text-sm text-cream/80">
+          ${escapeBookingHtml(orderItems.map((item) => `${item.name} x${item.quantity}`).join(', '))}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderClientBookingHistoryItem(bookingRequest) {
+  const status = bookingRequest.status || 'pending';
+  const statusLabel = isFinalClientBookingStatus(status)
+    ? getBookingStatusLabel(status)
+    : (
+        currentLang === 'es'
+          ? 'Reserva cerrada'
+          : currentLang === 'en'
+            ? 'Booking closed'
+            : currentLang === 'nl'
+              ? 'Reservatie afgesloten'
+              : 'Réservation clôturée'
+      );
+
+  return `
+    <div class="rounded-2xl border border-gold/20 bg-black/20 p-4">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div class="text-sm font-semibold text-gold">${escapeBookingHtml(statusLabel)}</div>
+          <div class="mt-1 text-xs text-cream/65">
+            ${escapeBookingHtml(formatBookingDateForDisplay(bookingRequest.booking?.date || ''))}
+            · ${escapeBookingHtml(bookingRequest.booking?.time || '-')}
+          </div>
+        </div>
+
+        <div class="text-sm font-semibold text-cream/80">
+          ${escapeBookingHtml(String(bookingRequest.booking?.people || '-'))}
+        </div>
+      </div>
+
+      ${bookingRequest.booking?.note ? `
+        <div class="mt-3 text-sm text-cream/80">
+          ${escapeBookingHtml(bookingRequest.booking.note)}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderClientOrderAccessButtons() {
+  if (!siteConfig.modules?.ordering) {
+    return '';
+  }
+
+  const lastOrderRequest = getLastOrderRequest();
+
+  if (!lastOrderRequest || !lastOrderRequest.order || !lastOrderRequest.customer) {
+    return '';
+  }
+
+  const tHistory = getClientHistoryTexts();
+  const status = lastOrderRequest.status || 'pending';
+  const hasCurrentOrder = !isFinalClientOrderStatus(status);
+
+  return `
+    <div class="mt-4 flex flex-wrap gap-2">
+      ${hasCurrentOrder ? `
+        <button onclick="openCurrentOrderModal()" class="btn-action px-3 py-2 rounded-xl border border-gold/30 bg-black/20 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
+          ${tHistory.currentOrder}
+        </button>
+      ` : ''}
+
+      <button onclick="openLastOrdersModal()" class="btn-action px-3 py-2 rounded-xl border border-gold/20 bg-black/10 text-xs font-semibold text-cream/80 hover:border-gold/45 hover:bg-gold/10 transition-all">
+        ${tHistory.lastOrders}
+      </button>
+    </div>
+  `;
+}
+
+function renderClientBookingAccessButtons() {
+  const lastBookingRequest = getLastBookingRequest();
+
+  if (!lastBookingRequest || !lastBookingRequest.booking || !lastBookingRequest.customer) {
+    return '';
+  }
+
+  const tHistory = getClientHistoryTexts();
+  const status = lastBookingRequest.status || 'pending';
+  const hasCurrentBooking = !isFinalClientBookingStatus(status);
+
+  return `
+    <div class="mt-4 flex flex-wrap gap-2">
+      ${hasCurrentBooking ? `
+        <button onclick="openCurrentBookingModal()" class="btn-action px-3 py-2 rounded-xl border border-gold/30 bg-black/20 text-xs font-semibold text-gold hover:bg-gold/10 transition-all">
+          ${tHistory.currentBooking}
+        </button>
+      ` : ''}
+
+      <button onclick="openLastBookingsModal()" class="btn-action px-3 py-2 rounded-xl border border-gold/20 bg-black/10 text-xs font-semibold text-cream/80 hover:border-gold/45 hover:bg-gold/10 transition-all">
+        ${tHistory.lastBookings}
+      </button>
+    </div>
+  `;
+}
+
 function renderLastOrderRequestCard() {
   if (!siteConfig.modules?.ordering) {
     return '';
@@ -3881,12 +4181,12 @@ function refreshClientRequestCards() {
   const orderSlot = document.getElementById('client-order-card-slot');
   const bookingSlot = document.getElementById('client-booking-card-slot');
 
-  if (orderSlot && typeof renderLastOrderRequestCard === 'function') {
-    orderSlot.innerHTML = renderLastOrderRequestCard();
+  if (orderSlot && typeof renderClientOrderAccessButtons === 'function') {
+    orderSlot.innerHTML = renderClientOrderAccessButtons();
   }
 
-  if (bookingSlot) {
-    bookingSlot.innerHTML = renderLastBookingRequestCard();
+  if (bookingSlot && typeof renderClientBookingAccessButtons === 'function') {
+    bookingSlot.innerHTML = renderClientBookingAccessButtons();
   }
 
   if (window.lucide) {
@@ -4238,6 +4538,19 @@ function openOrderReview() {
     renderMenu();
     return;
   }
+
+  const normalizedPhone = orderForm.phone.replace(/[^\d+]/g, '');
+  const digitCount = normalizedPhone.replace(/\D/g, '').length;
+  const phonePattern = /^\+?[0-9]{8,15}$/;
+
+  if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
+    setOrderFeedback('error', 'invalidPhone');
+    orderReviewOpen = false;
+    renderMenu();
+    return;
+  }
+
+  orderForm.phone = normalizedPhone;
 
   clearOrderFeedback();
   orderReviewOpen = true;
@@ -5027,7 +5340,7 @@ ${orderMode ? `
 </button>
       </div>
       <div id="client-order-card-slot">
-        ${renderLastOrderRequestCard()}
+        ${renderClientOrderAccessButtons()}
       </div>
     </div>
   </div>
@@ -5049,7 +5362,7 @@ ${bookingMode ? `
       </div>
 
       <div id="client-booking-card-slot">
-        ${renderLastBookingRequestCard()}
+        ${renderClientBookingAccessButtons()}
       </div>
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">

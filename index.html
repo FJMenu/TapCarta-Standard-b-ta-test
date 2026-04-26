@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.5';
+    const APP_VERSION = 'V1.2.6';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -2416,6 +2416,15 @@ function formatBookingDateTimeForDisplay(dateTimeValue) {
 
 function getBookingStatusLabel(status) {
   const tBooking = getBookingTexts(currentLang);
+  const tDecision = getBookingClientDecisionTexts();
+
+  if (status === 'accepted_by_client') {
+    return tDecision.acceptedStatus;
+  }
+
+  if (status === 'rejected_by_client') {
+    return tDecision.rejectedStatus;
+  }
 
   if (status === 'cancelled') {
     return tBooking.bookingStatusCancelled;
@@ -2716,9 +2725,9 @@ function getBookingClientDecisionTexts() {
       acceptConfirm: '¿Aceptar la modificación propuesta por el restaurante?',
       rejectConfirm: '¿Rechazar la modificación propuesta por el restaurante?',
       acceptedStatus: 'Modificación aceptada',
-      rejectedStatus: 'Solicitud anulada',
-      acceptedMessage: 'Has aceptado la modificación propuesta. El restaurante ha recibido tu respuesta y podrá confirmar tu reserva en breve.',
-      rejectedMessage: 'Tu solicitud ha sido anulada. Lamentamos no haber podido confirmar la reserva en las condiciones deseadas. El restaurante podrá ver tu respuesta y estaremos encantados de recibirte en otra ocasión.'
+      rejectedStatus: 'Modificación rechazada',
+      acceptedMessage: 'Has aceptado la modificación propuesta. Tu reserva queda validada con estos cambios.',
+      rejectedMessage: 'Has rechazado la modificación propuesta. Tu solicitud no queda validada con esta modificación.'
     };
   }
 
@@ -2729,9 +2738,9 @@ function getBookingClientDecisionTexts() {
       acceptConfirm: 'Accept the modification proposed by the restaurant?',
       rejectConfirm: 'Reject the modification proposed by the restaurant?',
       acceptedStatus: 'Modification accepted',
-      rejectedStatus: 'Request cancelled',
-      acceptedMessage: 'You accepted the proposed modification. The restaurant has received your response and will be able to confirm your booking shortly.',
-      rejectedMessage: 'Your request has been cancelled. We are sorry that we could not confirm the booking under the requested conditions. The restaurant will see your response, and we would be happy to welcome you another time.'
+      rejectedStatus: 'Modification rejected',
+      acceptedMessage: 'You accepted the proposed modification. Your booking is confirmed with these changes.',
+      rejectedMessage: 'You rejected the proposed modification. Your request is not confirmed with this change.'
     };
   }
 
@@ -2742,9 +2751,9 @@ function getBookingClientDecisionTexts() {
       acceptConfirm: 'De door het restaurant voorgestelde wijziging aanvaarden?',
       rejectConfirm: 'De door het restaurant voorgestelde wijziging weigeren?',
       acceptedStatus: 'Wijziging aanvaard',
-      rejectedStatus: 'Aanvraag geannuleerd',
-      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Het restaurant heeft uw antwoord ontvangen en kan uw reservatie binnenkort bevestigen.',
-      rejectedMessage: 'Uw aanvraag werd geannuleerd. Het spijt ons dat de reservatie niet kon worden bevestigd onder de gevraagde voorwaarden. Het restaurant ziet uw antwoord en ontvangt u graag op een ander moment.'
+      rejectedStatus: 'Wijziging geweigerd',
+      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Uw reservatie is bevestigd met deze wijzigingen.',
+      rejectedMessage: 'U hebt de voorgestelde wijziging geweigerd. Uw aanvraag is niet bevestigd met deze wijziging.'
     };
   }
 
@@ -2754,9 +2763,9 @@ function getBookingClientDecisionTexts() {
     acceptConfirm: 'Accepter la modification proposée par le restaurant ?',
     rejectConfirm: 'Refuser la modification proposée par le restaurant ?',
     acceptedStatus: 'Modification acceptée',
-    rejectedStatus: 'Demande annulée',
-    acceptedMessage: 'Vous avez accepté la modification proposée. Le restaurant a bien reçu votre réponse et pourra confirmer votre réservation dans les plus brefs délais.',
-    rejectedMessage: 'Votre demande a été annulée. Nous sommes désolés de ne pas avoir pu confirmer la réservation dans les conditions souhaitées. Le restaurant verra votre réponse et aura le plaisir de vous accueillir une prochaine fois.'
+    rejectedStatus: 'Modification refusée',
+    acceptedMessage: 'Vous avez accepté la modification proposée. Votre réservation est validée avec ces changements.',
+    rejectedMessage: 'Vous avez refusé la modification proposée. Votre demande n’est pas validée avec cette modification.'
   };
 }
 window.acceptLastBookingModification = async function() {
@@ -4034,7 +4043,12 @@ async function openLastOrdersModal() {
   const tHistory = getClientHistoryTexts();
 
   const orders = (await readOrderRequestsFromSource())
-    .filter((orderRequest) => orderRequest && orderRequest.order && orderRequest.customer)
+    .filter((orderRequest) =>
+      orderRequest &&
+      orderRequest.order &&
+      orderRequest.customer &&
+      isFinalClientOrderStatus(orderRequest.status || 'pending')
+    )
     .slice(0, 5);
 
   const contentHtml = orders.length
@@ -4063,11 +4077,16 @@ async function openLastBookingsModal() {
   const tHistory = getClientHistoryTexts();
 
   let bookings = (await readBookingRequestsFromStorage())
-    .filter((bookingRequest) => bookingRequest && bookingRequest.booking && bookingRequest.customer);
+    .filter((bookingRequest) =>
+      bookingRequest &&
+      bookingRequest.booking &&
+      bookingRequest.customer &&
+      isFinalClientBookingStatus(bookingRequest.status || 'pending')
+    );
 
   const lastBooking = getLastBookingRequest();
 
-  if (!LIVE_REQUESTS_ENABLED && lastBooking) {
+  if (!LIVE_REQUESTS_ENABLED && lastBooking && isFinalClientBookingStatus(lastBooking.status || 'pending')) {
     bookings = [
       lastBooking,
       ...bookings.filter((bookingRequest) => String(bookingRequest?.requestId) !== String(lastBooking.requestId))
@@ -4434,8 +4453,8 @@ function renderLastOrderRequestCard() {
       waiting: 'Votre commande a bien été transmise. Elle est en attente de confirmation par le restaurant.',
       processing: 'Le restaurant a consulté votre commande et la traite actuellement.',
       modified: 'Le restaurant vous propose une modification de votre commande.',
-      acceptedByClient: 'Vous avez accepté la modification proposée. Le restaurant doit maintenant la traiter.',
-      rejectedByClient: 'Vous avez refusé la modification proposée. Le restaurant doit maintenant la traiter.',
+      acceptedByClient: 'Vous avez accepté la modification proposée. Votre commande est validée avec ces changements.',
+      rejectedByClient: 'Vous avez refusé la modification proposée. Votre demande n’est pas validée avec cette modification.',
       confirmed: 'Le restaurant a confirmé votre commande.',
       served: 'Votre commande a été servie.',
       notServed: 'Votre commande est indiquée comme non servie.',
@@ -4461,8 +4480,8 @@ function renderLastOrderRequestCard() {
       waiting: 'Tu pedido ha sido transmitido correctamente. Está pendiente de confirmación por el restaurante.',
       processing: 'El restaurante ha consultado tu pedido y lo está gestionando.',
       modified: 'El restaurante te propone una modificación de tu pedido.',
-      acceptedByClient: 'Has aceptado la modificación propuesta. El restaurante debe gestionarla ahora.',
-      rejectedByClient: 'Has rechazado la modificación propuesta. El restaurante debe gestionarla ahora.',
+      acceptedByClient: 'Has aceptado la modificación propuesta. Tu pedido queda validado con estos cambios.',
+      rejectedByClient: 'Has rechazado la modificación propuesta. Tu solicitud no queda validada con esta modificación.',
       confirmed: 'El restaurante ha confirmado tu pedido.',
       served: 'Tu pedido ha sido servido.',
       notServed: 'Tu pedido aparece como no servido.',
@@ -4488,8 +4507,8 @@ function renderLastOrderRequestCard() {
       waiting: 'Your order has been transmitted. It is awaiting confirmation from the restaurant.',
       processing: 'The restaurant has opened your order and is currently processing it.',
       modified: 'The restaurant proposes a modification to your order.',
-      acceptedByClient: 'You accepted the proposed modification. The restaurant must now process it.',
-      rejectedByClient: 'You rejected the proposed modification. The restaurant must now process it.',
+      acceptedByClient: 'You accepted the proposed modification. Your order is confirmed with these changes.',
+      rejectedByClient: 'You rejected the proposed modification. Your request is not confirmed with this change.',
       confirmed: 'The restaurant has confirmed your order.',
       served: 'Your order has been served.',
       notServed: 'Your order is marked as not served.',
@@ -4515,8 +4534,8 @@ function renderLastOrderRequestCard() {
       waiting: 'Je bestelling is goed doorgestuurd. Ze wacht op bevestiging door het restaurant.',
       processing: 'Het restaurant heeft je bestelling geopend en verwerkt ze momenteel.',
       modified: 'Het restaurant stelt een wijziging van je bestelling voor.',
-      acceptedByClient: 'U hebt de voorgestelde wijziging aanvaard. Het restaurant moet die nu verwerken.',
-      rejectedByClient: 'U hebt de voorgestelde wijziging geweigerd. Het restaurant moet die nu verwerken.',
+      acceptedByClient: 'U hebt de voorgestelde wijziging aanvaard. Uw bestelling is bevestigd met deze wijzigingen.',
+      rejectedByClient: 'U hebt de voorgestelde wijziging geweigerd. Uw aanvraag is niet bevestigd met deze wijziging.',
       confirmed: 'Het restaurant heeft je bestelling bevestigd.',
       served: 'Je bestelling werd geserveerd.',
       notServed: 'Je bestelling staat aangeduid als niet geserveerd.',

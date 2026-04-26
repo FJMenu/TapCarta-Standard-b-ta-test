@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.6';
+    const APP_VERSION = 'V1.2.7';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -2415,62 +2415,71 @@ function formatBookingDateTimeForDisplay(dateTimeValue) {
 }
 
 function getBookingStatusLabel(status) {
+  const normalizedStatus = status || 'pending';
   const tBooking = getBookingTexts(currentLang);
   const tDecision = getBookingClientDecisionTexts();
 
-  if (status === 'accepted_by_client') {
+  if (normalizedStatus === 'accepted_by_client') {
     return tDecision.acceptedStatus;
   }
 
-  if (status === 'rejected_by_client') {
+  if (normalizedStatus === 'rejected_by_client') {
     return tDecision.rejectedStatus;
   }
 
-  if (status === 'cancelled') {
-    return tBooking.bookingStatusCancelled;
-  }
+  const labels = {
+    fr: {
+      pending: tBooking.bookingStatusPending,
+      processing: 'En cours de traitement',
+      modified: 'Modification proposée',
+      confirmed: 'Confirmée',
+      refused: 'Refusée',
+      cancelled: tBooking.bookingStatusCancelled,
+      cancelled_by_client: 'Annulée par le client',
+      arrived: 'Client arrivé',
+      not_arrived: 'Client non venu',
+      presence_unknown_no_action: 'Réservation clôturée'
+    },
+    es: {
+      pending: tBooking.bookingStatusPending,
+      processing: 'En tratamiento',
+      modified: 'Modificación propuesta',
+      confirmed: 'Confirmada',
+      refused: 'Rechazada',
+      cancelled: tBooking.bookingStatusCancelled,
+      cancelled_by_client: 'Cancelada por el cliente',
+      arrived: 'Cliente llegado',
+      not_arrived: 'Cliente no presentado',
+      presence_unknown_no_action: 'Reserva cerrada'
+    },
+    en: {
+      pending: tBooking.bookingStatusPending,
+      processing: 'Processing',
+      modified: 'Modification proposed',
+      confirmed: 'Confirmed',
+      refused: 'Refused',
+      cancelled: tBooking.bookingStatusCancelled,
+      cancelled_by_client: 'Cancelled by client',
+      arrived: 'Client arrived',
+      not_arrived: 'Client did not arrive',
+      presence_unknown_no_action: 'Booking closed'
+    },
+    nl: {
+      pending: tBooking.bookingStatusPending,
+      processing: 'In behandeling',
+      modified: 'Wijziging voorgesteld',
+      confirmed: 'Bevestigd',
+      refused: 'Geweigerd',
+      cancelled: tBooking.bookingStatusCancelled,
+      cancelled_by_client: 'Geannuleerd door klant',
+      arrived: 'Klant aangekomen',
+      not_arrived: 'Klant niet gekomen',
+      presence_unknown_no_action: 'Reservatie afgesloten'
+    }
+  };
 
-  if (status === 'modified') {
-    return currentLang === 'fr'
-      ? 'Modification proposée'
-      : currentLang === 'es'
-        ? 'Modificación propuesta'
-        : currentLang === 'nl'
-          ? 'Wijziging voorgesteld'
-          : 'Modification proposed';
-  }
-
-  if (status === 'confirmed') {
-    return currentLang === 'fr'
-      ? 'Confirmée'
-      : currentLang === 'es'
-        ? 'Confirmada'
-        : currentLang === 'nl'
-          ? 'Bevestigd'
-          : 'Confirmed';
-  }
-
-  if (status === 'refused') {
-    return currentLang === 'fr'
-      ? 'Refusée'
-      : currentLang === 'es'
-        ? 'Rechazada'
-        : currentLang === 'nl'
-          ? 'Geweigerd'
-          : 'Refused';
-  }
-
-  if (status === 'processing') {
-    return currentLang === 'fr'
-      ? 'En cours de traitement'
-      : currentLang === 'es'
-        ? 'En tratamiento'
-        : currentLang === 'nl'
-          ? 'In behandeling'
-          : 'Processing';
-  }
-
-  return tBooking.bookingStatusPending;
+  const langLabels = labels[currentLang] || labels.fr;
+  return langLabels[normalizedStatus] || langLabels.pending;
 }
 
 function isEditingBookingRequest() {
@@ -2772,6 +2781,8 @@ window.acceptLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
 
+  const hadOpenBookingSummaryModal = Boolean(document.getElementById('booking-summary-modal'));
+  const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
   const updatedRequest = {
     ...bookingRequest,
@@ -2795,6 +2806,15 @@ window.acceptLastBookingModification = async function() {
   await readBookingRequestsFromStorage();
   renderMenu();
 
+  if (hadOpenBookingSummaryModal) {
+    removeBookingSummaryModal();
+    await viewLastBookingRequest();
+  }
+
+  if (hadOpenHistoryModal) {
+    await openCurrentBookingModal();
+  }
+
   setTimeout(() => {
     const bookingCard = document.getElementById('client-booking-card');
     if (bookingCard) {
@@ -2806,6 +2826,8 @@ window.rejectLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
 
+  const hadOpenBookingSummaryModal = Boolean(document.getElementById('booking-summary-modal'));
+  const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
   const updatedRequest = {
     ...bookingRequest,
@@ -2828,6 +2850,15 @@ window.rejectLastBookingModification = async function() {
 
   await readBookingRequestsFromStorage();
   renderMenu();
+
+  if (hadOpenBookingSummaryModal) {
+    removeBookingSummaryModal();
+    await viewLastBookingRequest();
+  }
+
+  if (hadOpenHistoryModal) {
+    await openCurrentBookingModal();
+  }
 
   setTimeout(() => {
     const bookingCard = document.getElementById('client-booking-card');
@@ -2927,8 +2958,13 @@ function renderLastBookingRequestCard() {
   const tBooking = getBookingTexts(currentLang);
   const tDecision = getBookingClientDecisionTexts();
   const status = bookingRequest.status || 'pending';
-  const canEdit = !['confirmed', 'cancelled', 'refused', 'modified', 'accepted_by_client', 'rejected_by_client'].includes(status);
-  const canCancel = !['confirmed', 'cancelled', 'refused', 'accepted_by_client', 'rejected_by_client'].includes(status);
+
+  if (isFinalClientBookingStatus(status)) {
+    return '';
+  }
+
+  const canEdit = !['confirmed', 'cancelled', 'cancelled_by_client', 'refused', 'modified', 'accepted_by_client', 'rejected_by_client', 'arrived', 'not_arrived', 'presence_unknown_no_action'].includes(status);
+  const canCancel = !['confirmed', 'cancelled', 'cancelled_by_client', 'refused', 'accepted_by_client', 'rejected_by_client', 'arrived', 'not_arrived', 'presence_unknown_no_action'].includes(status);
   const preorderItems = Array.isArray(bookingRequest.booking.preorderItems)
     ? bookingRequest.booking.preorderItems
     : [];
@@ -3740,7 +3776,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Rechazar',
       acceptConfirm: '¿Aceptar la modificación propuesta por el restaurante?',
       rejectConfirm: '¿Rechazar la modificación propuesta por el restaurante?',
-      acceptedMessage: 'Has aceptado la modificación propuesta. El restaurante verá ahora tu respuesta.',
+      acceptedMessage: 'Has aceptado la modificación propuesta. Tu pedido queda validado con estos cambios.',
       rejectedMessage: 'Has rechazado la modificación propuesta. El restaurante verá ahora tu respuesta.'
     };
   }
@@ -3754,7 +3790,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Reject',
       acceptConfirm: 'Accept the modification proposed by the restaurant?',
       rejectConfirm: 'Reject the modification proposed by the restaurant?',
-      acceptedMessage: 'You accepted the proposed modification. The restaurant will now see your response.',
+      acceptedMessage: 'You accepted the proposed modification. Your order is confirmed with these changes.',
       rejectedMessage: 'You rejected the proposed modification. The restaurant will now see your response.'
     };
   }
@@ -3768,7 +3804,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Weigeren',
       acceptConfirm: 'De door het restaurant voorgestelde wijziging aanvaarden?',
       rejectConfirm: 'De door het restaurant voorgestelde wijziging weigeren?',
-      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Het restaurant ziet nu uw antwoord.',
+      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Uw bestelling is bevestigd met deze wijzigingen.',
       rejectedMessage: 'U hebt de voorgestelde wijziging geweigerd. Het restaurant ziet nu uw antwoord.'
     };
   }
@@ -3781,7 +3817,7 @@ function getOrderClientDecisionTexts() {
     rejectButton: 'Refuser',
     acceptConfirm: 'Accepter la modification proposée par le restaurant ?',
     rejectConfirm: 'Refuser la modification proposée par le restaurant ?',
-    acceptedMessage: 'Vous avez accepté la modification proposée. Le restaurant verra maintenant votre réponse.',
+    acceptedMessage: 'Vous avez accepté la modification proposée. Votre commande est validée avec ces changements.',
     rejectedMessage: 'Vous avez refusé la modification proposée. Le restaurant verra maintenant votre réponse.'
   };
 }
@@ -3790,6 +3826,7 @@ window.acceptLastOrderModification = async function() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
 
+  const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
   const updatedOrderRequest = {
     ...orderRequest,
@@ -3808,7 +3845,11 @@ window.acceptLastOrderModification = async function() {
 
   if (syncedOrderRequest) {
     await syncLastOrderRequestFromSource();
-    refreshClientRequestCards();
+    await refreshClientRequestCards();
+
+    if (hadOpenHistoryModal) {
+      await openCurrentOrderModal();
+    }
 
     setTimeout(() => {
       const orderCard = document.getElementById('client-order-card');
@@ -3823,6 +3864,7 @@ window.rejectLastOrderModification = async function() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
 
+  const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
   const updatedOrderRequest = {
     ...orderRequest,
@@ -3841,7 +3883,11 @@ window.rejectLastOrderModification = async function() {
 
   if (syncedOrderRequest) {
     await syncLastOrderRequestFromSource();
-    refreshClientRequestCards();
+    await refreshClientRequestCards();
+
+    if (hadOpenHistoryModal) {
+      await openCurrentOrderModal();
+    }
 
     setTimeout(() => {
       const orderCard = document.getElementById('client-order-card');
@@ -3954,11 +4000,11 @@ function getClientHistoryTexts() {
 }
 
 function isFinalClientOrderStatus(status) {
-  return ['served', 'not_served', 'refused', 'cancelled', 'service_unknown_no_action'].includes(status || '');
+  return ['served', 'not_served', 'refused', 'cancelled', 'cancelled_by_client', 'service_unknown_no_action'].includes(status || '');
 }
 
 function isFinalClientBookingStatus(status) {
-  return ['arrived', 'not_arrived', 'refused', 'cancelled', 'presence_unknown_no_action'].includes(status || '');
+  return ['arrived', 'not_arrived', 'refused', 'cancelled', 'cancelled_by_client', 'presence_unknown_no_action'].includes(status || '');
 }
 
 function openClientHistoryModal(title, contentHtml) {
@@ -4432,6 +4478,12 @@ function renderLastOrderRequestCard() {
     return '';
   }
 
+  const status = orderRequest.status || 'pending';
+
+  if (isFinalClientOrderStatus(status)) {
+    return '';
+  }
+
   const tDecision = getOrderClientDecisionTexts();
 
   const cardTexts = {
@@ -4548,7 +4600,6 @@ function renderLastOrderRequestCard() {
   const texts = cardTexts[currentLang] || cardTexts.fr;
   const orderItems = Array.isArray(orderRequest.order.items) ? orderRequest.order.items : [];
   const proposedTime = orderRequest.restaurantResponse?.proposal?.proposedTime || '';
-  const status = orderRequest.status || 'pending';
   const totalAmount = Number(orderRequest.order.totalAmount || 0);
   const isFinalStatus = isFinalClientOrderStatus(status);
 
@@ -5327,6 +5378,7 @@ async function validateOrderReview() {
   setOrderFeedback('success', 'orderSent');
 
   cart = [];
+  cartPanelOpen = false;
   orderReviewOpen = false;
 
   orderForm = {
@@ -6176,7 +6228,7 @@ ${bookingMode ? `
   </section>
 ` : ''}
 
-${orderMode && !cartPanelOpen ? `
+${orderMode && !cartPanelOpen && cartSummary.itemCount > 0 ? `
   <div class="fixed right-4 bottom-4 z-40">
     <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl max-w-[calc(100vw-2rem)]">
       <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform flex-shrink-0"></i>

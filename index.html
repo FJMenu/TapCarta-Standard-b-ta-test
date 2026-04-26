@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.2';
+    const APP_VERSION = 'V1.2.3';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1753,6 +1753,7 @@ let orderMode = false;
 let bookingMode = false;
 let cart = [];
 let cartPanelOpen = false;
+let activeOrderCategory = 'all';
 let orderReviewOpen = false;
 let orderForm = {
   name: '',
@@ -3134,6 +3135,7 @@ function activateOrderMode() {
     orderMode = false;
     bookingMode = false;
     cartPanelOpen = false;
+    activeOrderCategory = 'all';
     orderReviewOpen = false;
     renderApp();
     return;
@@ -3142,6 +3144,7 @@ function activateOrderMode() {
   orderMode = true;
   bookingMode = false;
   cartPanelOpen = false;
+  activeOrderCategory = 'all';
   orderReviewOpen = false;
 
   if (!orderForm.date && !orderForm.time) {
@@ -3151,10 +3154,7 @@ function activateOrderMode() {
   renderMenu();
 
   requestAnimationFrame(() => {
-    const target =
-      document.getElementById('menu-snacks') ||
-      document.getElementById('menu-entrees') ||
-      document.getElementById('menu-plats');
+    const target = document.getElementById('menu-start');
 
     if (target) {
       target.scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -3167,6 +3167,7 @@ function activateOrderMode() {
 function deactivateOrderMode() {
   orderMode = false;
   cartPanelOpen = false;
+  activeOrderCategory = 'all';
   orderReviewOpen = false;
   renderMenu();
   window.scrollTo({ top: 0, behavior: 'auto' });
@@ -4642,6 +4643,92 @@ function renderCategory(categoryKey, categoryLabel, t) {
       `;
     }
 
+function getNumericMenuItemPrice(item) {
+  if (!item || !item.price) return 0;
+
+  const numericPrice = parseFloat(
+    String(item.price)
+      .replace('€', '')
+      .replace(',', '.')
+      .trim()
+  );
+
+  return Number.isNaN(numericPrice) ? 0 : numericPrice;
+}
+
+function calculateCartSummary() {
+  const allMenuItems = Object.values(menuData).flat();
+
+  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  const totalAmount = cart.reduce((sum, cartItem) => {
+    const sourceItem = allMenuItems.find(menuItem => menuItem.id === cartItem.id);
+    return sum + (getNumericMenuItemPrice(sourceItem) * cartItem.quantity);
+  }, 0);
+
+  return {
+    itemCount,
+    totalAmount,
+    totalFormatted: `${totalAmount.toFixed(2).replace('.', ',')} €`
+  };
+}
+
+function getOrderCategoryAllLabel() {
+  if (currentLang === 'es') return 'Todo';
+  if (currentLang === 'en') return 'All';
+  if (currentLang === 'nl') return 'Alles';
+  return 'Tout';
+}
+
+function setOrderCategory(categoryKey) {
+  activeOrderCategory = categoryKey || 'all';
+  cartPanelOpen = false;
+  orderReviewOpen = false;
+  clearOrderFeedback();
+  renderMenu();
+}
+
+function renderOrderCategoryFilter(visibleCategoryKeys, t) {
+  if (!orderMode || cartPanelOpen || !visibleCategoryKeys.length) {
+    return '';
+  }
+
+  const categoryButtons = [
+    {
+      key: 'all',
+      label: getOrderCategoryAllLabel()
+    },
+    ...visibleCategoryKeys.map(categoryKey => ({
+      key: categoryKey,
+      label: menuMeta.categories[categoryKey]?.name || t[categoryKey] || categoryKey
+    }))
+  ];
+
+  return `
+    <div class="mb-6 rounded-2xl border border-gold/25 bg-darkCard/80 px-3 py-3 shadow-lg">
+      <div class="flex flex-wrap justify-center gap-2">
+        ${categoryButtons.map(category => {
+          const isActive = activeOrderCategory === category.key;
+
+          return `
+            <button
+              type="button"
+              onclick="setOrderCategory('${category.key}')"
+              class="btn-action px-3 py-2 rounded-lg border text-xs font-semibold tracking-wide transition-all ${
+                isActive
+                  ? 'border-gold bg-gold/15 text-gold shadow-md'
+                  : 'border-gold/35 text-cream/85 hover:border-gold hover:bg-gold/10'
+              }"
+            >
+              ${category.label}
+            </button>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
     function renderAllergenSection(t) {
       const cards = allergenVisuals.map((item, index) => `
         <div class="allergen-card">
@@ -4779,7 +4866,16 @@ const visibleCategoryKeys = Object.keys(menuData)
     return orderA - orderB;
   });
 
-const menuHTML = visibleCategoryKeys
+if (activeOrderCategory !== 'all' && !visibleCategoryKeys.includes(activeOrderCategory)) {
+  activeOrderCategory = 'all';
+}
+
+const visibleOrderCategoryKeys =
+  orderMode && activeOrderCategory !== 'all'
+    ? visibleCategoryKeys.filter(categoryKey => categoryKey === activeOrderCategory)
+    : visibleCategoryKeys;
+
+const menuHTML = visibleOrderCategoryKeys
   .map(categoryKey => {
     const categoryLabel =
       menuMeta.categories[categoryKey]?.name ||
@@ -4788,6 +4884,8 @@ const menuHTML = visibleCategoryKeys
     return renderCategory(categoryKey, categoryLabel, t);
   })
   .join('');
+
+const cartSummary = calculateCartSummary();
 
       wrapper.innerHTML = `
       <header class="relative overflow-hidden pt-28 pb-16 px-4 text-center animate-fade-up">
@@ -4815,6 +4913,8 @@ ${orderMode ? `
   ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
+      ${renderOrderCategoryFilter(visibleCategoryKeys, t)}
+
       <div id="client-order-card-slot">
         ${renderLastOrderRequestCard()}
       </div>
@@ -5024,9 +5124,11 @@ ${bookingMode ? `
 
 ${orderMode && !cartPanelOpen ? `
   <div class="fixed right-4 bottom-4 z-40">
-    <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl">
-      <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-      <span class="text-xs font-semibold tracking-wide">${t.cartButton} (${cart.reduce((total, item) => total + item.quantity, 0)})</span>
+    <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-darkCard border-2 border-gold/50 text-cream hover:border-gold hover:bg-gold/10 transition-all shadow-xl max-w-[calc(100vw-2rem)]">
+      <i data-lucide="shopping-cart" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform flex-shrink-0"></i>
+      <span class="text-xs font-semibold tracking-wide whitespace-nowrap">
+        ${t.cartButton} · ${cartSummary.itemCount} · ${cartSummary.totalFormatted}
+      </span>
     </button>
   </div>
 ` : ''}

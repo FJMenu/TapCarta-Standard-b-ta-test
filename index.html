@@ -4913,8 +4913,6 @@ ${orderMode ? `
   ${getBookingTexts(currentLang).bookingBackToHome}
 </button>
       </div>
-      ${renderOrderCategoryFilter(visibleCategoryKeys, t)}
-
       <div id="client-order-card-slot">
         ${renderLastOrderRequestCard()}
       </div>
@@ -5180,6 +5178,7 @@ ${!orderMode ? `
 
   ${orderMode && !cartPanelOpen ? `
     <div class="w-full max-w-3xl mx-auto mt-6">
+      ${renderOrderCategoryFilter(visibleCategoryKeys, t)}
       ${menuHTML}
     </div>
   ` : ''}

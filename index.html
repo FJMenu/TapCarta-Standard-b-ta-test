@@ -3897,8 +3897,13 @@ function renderClientHistoryEmptyText() {
   return 'Rien à afficher pour le moment.';
 }
 
-function openCurrentOrderModal() {
+async function openCurrentOrderModal() {
   const tHistory = getClientHistoryTexts();
+
+  if (LIVE_REQUESTS_ENABLED) {
+    await syncLastOrderRequestFromSource();
+  }
+
   openClientHistoryModal(tHistory.currentOrder, renderLastOrderRequestCard());
 }
 
@@ -3916,8 +3921,13 @@ async function openLastOrdersModal() {
   openClientHistoryModal(tHistory.lastOrders, contentHtml);
 }
 
-function openCurrentBookingModal() {
+async function openCurrentBookingModal() {
   const tHistory = getClientHistoryTexts();
+
+  if (LIVE_REQUESTS_ENABLED) {
+    await readBookingRequestsFromStorage();
+  }
+
   openClientHistoryModal(tHistory.currentBooking, renderLastBookingRequestCard());
 }
 

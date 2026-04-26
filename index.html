@@ -2735,12 +2735,6 @@ window.acceptLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
 
-  const tDecision = getBookingClientDecisionTexts();
-
-  if (!window.confirm(tDecision.acceptConfirm)) {
-    return;
-  }
-
   const nowIso = new Date().toISOString();
   const updatedRequest = {
     ...bookingRequest,
@@ -2756,19 +2750,19 @@ window.acceptLastBookingModification = async function() {
   };
 
   await updateStoredBookingRequest(updatedRequest);
-  alert(tDecision.acceptedMessage);
   renderMenu();
+
+  setTimeout(() => {
+    const bookingCard = document.getElementById('client-booking-card');
+    if (bookingCard) {
+      bookingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
 };
 
 window.rejectLastBookingModification = async function() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest || (bookingRequest.status || 'pending') !== 'modified') return;
-
-  const tDecision = getBookingClientDecisionTexts();
-
-  if (!window.confirm(tDecision.rejectConfirm)) {
-    return;
-  }
 
   const nowIso = new Date().toISOString();
   const updatedRequest = {
@@ -2785,8 +2779,14 @@ window.rejectLastBookingModification = async function() {
   };
 
   await updateStoredBookingRequest(updatedRequest);
-  alert(tDecision.rejectedMessage);
   renderMenu();
+
+  setTimeout(() => {
+    const bookingCard = document.getElementById('client-booking-card');
+    if (bookingCard) {
+      bookingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
 };
 
 function editLastBookingRequest() {
@@ -3236,8 +3236,6 @@ async function validateAndSubmitBooking() {
   console.log('TapCarta booking request saved:', bookingRequest);
   console.log('TapCarta booking requests history:', bookingRequests);
 
-  alert(isEditingExistingBooking ? tBooking.bookingUpdatedAlert : tBooking.bookingPendingAlert);
-
   resetBookingForm();
   renderMenu();
 
@@ -3673,12 +3671,6 @@ window.acceptLastOrderModification = async function() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
 
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.acceptConfirm)) {
-    return;
-  }
-
   const nowIso = new Date().toISOString();
   const updatedOrderRequest = {
     ...orderRequest,
@@ -3696,21 +3688,21 @@ window.acceptLastOrderModification = async function() {
   const syncedOrderRequest = await updateStoredOrderRequest(updatedOrderRequest);
 
   if (syncedOrderRequest) {
-    alert(tDecision.acceptedMessage);
     await syncLastOrderRequestFromSource();
     refreshClientRequestCards();
+
+    setTimeout(() => {
+      const orderCard = document.getElementById('client-order-card');
+      if (orderCard) {
+        orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
   }
 };
 
 window.rejectLastOrderModification = async function() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
-
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.rejectConfirm)) {
-    return;
-  }
 
   const nowIso = new Date().toISOString();
   const updatedOrderRequest = {
@@ -3729,9 +3721,15 @@ window.rejectLastOrderModification = async function() {
   const syncedOrderRequest = await updateStoredOrderRequest(updatedOrderRequest);
 
   if (syncedOrderRequest) {
-    alert(tDecision.rejectedMessage);
     await syncLastOrderRequestFromSource();
     refreshClientRequestCards();
+
+    setTimeout(() => {
+      const orderCard = document.getElementById('client-order-card');
+      if (orderCard) {
+        orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
   }
 };
 

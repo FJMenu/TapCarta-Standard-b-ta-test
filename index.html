@@ -32,15 +32,23 @@ async function insertLiveRequest(payload) {
   return data;
 }
 
-async function fetchLiveRequestById(requestId) {
-  const { data, error } = await supabaseClient
+ async function fetchLiveRequestById(requestId, requestType = null) {
+  if (!requestId || !LIVE_RESTAURANT_ID) return null;
+
+  let query = supabaseClient
     .from('requests')
     .select('*')
     .eq('id', requestId)
-    .single();
+    .eq('restaurant_id', LIVE_RESTAURANT_ID);
+
+  if (requestType) {
+    query = query.eq('type', requestType);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data || null;
 }
 
 async function fetchLiveRequestsByType(requestType) {
@@ -2154,7 +2162,7 @@ async function readBookingRequestsFromStorage() {
         const liveRequestId = parsedLastBooking?.liveRequestId || parsedLastBooking?.requestId || null;
 
         if (liveRequestId) {
-          const liveRow = await fetchLiveRequestById(liveRequestId);
+          const liveRow = await fetchLiveRequestById(liveRequestId, 'booking');
           const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
 
           if (syncedLastBooking) {
@@ -2286,6 +2294,8 @@ async function updateStoredBookingRequest(updatedRequest) {
           status: updatedRequest?.status || 'pending'
         })
         .eq('id', liveRequestId)
+        .eq('restaurant_id', updatedRequest?.restaurantId || LIVE_RESTAURANT_ID)
+        .eq('type', 'booking')
         .select('*')
         .maybeSingle();
 
@@ -3401,7 +3411,7 @@ async function syncLastOrderRequestFromSource() {
       return parsedLastOrder || null;
     }
 
-    const liveRow = await fetchLiveRequestById(liveRequestId);
+    const liveRow = await fetchLiveRequestById(liveRequestId, 'order');
     const syncedLastOrder = mapLiveOrderRowToRequest(liveRow);
 
     if (!syncedLastOrder) {

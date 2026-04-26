@@ -2161,9 +2161,11 @@ async function readBookingRequestsFromStorage() {
 
       await syncLastBookingRequestFromSource();
 
+      clientBookingSyncUnavailable = false;
       return liveRequests;
     } catch (error) {
       console.error('Supabase booking read error:', error);
+      clientBookingSyncUnavailable = true;
       return [];
     }
   }
@@ -3500,9 +3502,11 @@ async function readOrderRequestsFromSource() {
       writeOrderRequestsToStorage(liveOrders.slice(0, 20));
       await syncLastOrderRequestFromSource();
 
+      clientOrderSyncUnavailable = false;
       return liveOrders;
     } catch (error) {
       console.error('Supabase order read error:', error);
+      clientOrderSyncUnavailable = true;
       return [];
     }
   }
@@ -3970,6 +3974,11 @@ async function openCurrentOrderModal() {
 
   if (LIVE_REQUESTS_ENABLED) {
     await syncLastOrderRequestFromSource();
+
+    if (clientOrderSyncUnavailable) {
+      openClientHistoryModal(tHistory.currentOrder, renderClientSyncUnavailableCard('order'));
+      return;
+    }
   }
 
   openClientHistoryModal(tHistory.currentOrder, renderLastOrderRequestCard());
@@ -3994,6 +4003,11 @@ async function openCurrentBookingModal() {
 
   if (LIVE_REQUESTS_ENABLED) {
     await readBookingRequestsFromStorage();
+
+    if (clientBookingSyncUnavailable) {
+      openClientHistoryModal(tHistory.currentBooking, renderClientSyncUnavailableCard('booking'));
+      return;
+    }
   }
 
   openClientHistoryModal(tHistory.currentBooking, renderLastBookingRequestCard());
@@ -4732,18 +4746,27 @@ async function refreshClientRequestCards() {
 }
 
 window.manualRefreshClientRequests = async function() {
-  if (LIVE_REQUESTS_ENABLED) {
-    bookingRequests = await fetchLiveRequestsByType('booking');
-    await fetchLiveRequestsByType('order');
-  } else {
-    if (typeof readBookingRequestsFromStorage === 'function') {
-      bookingRequests = await readBookingRequestsFromStorage();
-    }
+  try {
+    if (LIVE_REQUESTS_ENABLED) {
+      bookingRequests = await fetchLiveRequestsByType('booking');
+      await fetchLiveRequestsByType('order');
+    } else {
+      if (typeof readBookingRequestsFromStorage === 'function') {
+        bookingRequests = await readBookingRequestsFromStorage();
+      }
 
-    readOrderRequestsFromStorage();
+      readOrderRequestsFromStorage();
+    }
+  } catch (error) {
+    console.error('Manual client request refresh error:', error);
+
+    if (LIVE_REQUESTS_ENABLED) {
+      clientOrderSyncUnavailable = true;
+      clientBookingSyncUnavailable = true;
+    }
   }
 
-  refreshClientRequestCards();
+  await refreshClientRequestCards();
 };
 
 async function fetchLiveMenuMeta() {
@@ -4841,9 +4864,11 @@ function startClientMenuAutoRefresh() {
 }
 
 function setupClientRequestAutoRefresh() {
-  refreshClientRequestCards();
-  startClientRequestAutoRefresh();
-  startClientMenuAutoRefresh();
+  refreshClientRequestCards()
+    .finally(() => {
+      startClientRequestAutoRefresh();
+      startClientMenuAutoRefresh();
+    });
 }
 
 function deactivateBookingMode() {

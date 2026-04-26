@@ -5249,15 +5249,8 @@ ${!orderMode ? `
 
   ${orderMode && cartPanelOpen ? `
     <div class="w-full max-w-3xl mx-auto mt-2 rounded-2xl border border-gold/40 bg-darkCard px-4 py-4 shadow-lg">
-           <div class="mb-4">
+      <div class="mb-4">
         <div class="text-sm font-semibold text-gold tracking-wide uppercase text-center mb-4">${t.cartTitle}</div>
-
-        <div class="flex justify-center">
-          <button onclick="toggleCartPanel()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20 w-full sm:w-auto min-w-[260px]">
-            <i data-lucide="plus-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-            <span class="text-sm font-semibold text-cream tracking-wide">${t.continueAddingButton}</span>
-          </button>
-        </div>
       </div>
 
       <div class="flex items-center justify-between gap-3 mb-2">

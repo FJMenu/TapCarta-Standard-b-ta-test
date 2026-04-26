@@ -4094,10 +4094,11 @@ function escapeOrderFeedbackHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
-function setOrderFeedback(type, message) {
+function setOrderFeedback(type, key, fallbackMessage = '') {
   orderFeedback = {
     type,
-    message: String(message || '').trim()
+    key: String(key || '').trim(),
+    fallbackMessage: String(fallbackMessage || '').trim()
   };
 }
 
@@ -4110,8 +4111,18 @@ function clearOrderFeedback() {
   }
 }
 
+function getCurrentOrderFeedbackMessage() {
+  if (!orderFeedback?.key) return '';
+
+  const feedbackTexts = getOrderFeedbackTexts();
+
+  return feedbackTexts[orderFeedback.key] || orderFeedback.fallbackMessage || '';
+}
+
 function renderOrderFeedbackMessage() {
-  if (!orderFeedback?.message) {
+  const feedbackMessage = getCurrentOrderFeedbackMessage();
+
+  if (!feedbackMessage) {
     return '';
   }
 
@@ -4126,7 +4137,7 @@ function renderOrderFeedbackMessage() {
           : 'border-red-400/45 bg-red-950/55 text-red-50'
       }"
     >
-      ${escapeOrderFeedbackHtml(orderFeedback.message).replace(/\n/g, '<br>')}
+      ${escapeOrderFeedbackHtml(feedbackMessage).replace(/\n/g, '<br>')}
     </div>
   `;
 }
@@ -4134,7 +4145,10 @@ function renderOrderFeedbackMessage() {
 function getOrderFeedbackTexts() {
   const texts = {
     fr: {
+      nameRequired: 'Veuillez indiquer votre nom pour continuer.',
+      phoneRequired: 'Veuillez indiquer votre numéro de téléphone pour continuer.',
       namePhoneRequired: 'Veuillez indiquer votre nom et votre téléphone pour continuer.',
+      dateTimeRequired: 'Veuillez indiquer la date et l’heure souhaitées.',
       cartEmpty: 'Ajoutez au moins un article à votre panier avant de valider votre commande.',
       requiredReviewFields: 'Veuillez compléter les informations obligatoires de votre commande.',
       invalidPhone: 'Veuillez entrer un numéro de téléphone valide.\nExemple : +34612345678',
@@ -4142,7 +4156,10 @@ function getOrderFeedbackTexts() {
       orderSent: 'Votre commande a bien été envoyée au restaurant. Elle est maintenant en attente de confirmation.'
     },
     es: {
+      nameRequired: 'Indica tu nombre para continuar.',
+      phoneRequired: 'Indica tu número de teléfono para continuar.',
       namePhoneRequired: 'Indica tu nombre y tu teléfono para continuar.',
+      dateTimeRequired: 'Indica la fecha y la hora deseadas.',
       cartEmpty: 'Añade al menos un artículo a tu cesta antes de validar el pedido.',
       requiredReviewFields: 'Completa la información obligatoria de tu pedido.',
       invalidPhone: 'Introduce un número de teléfono válido.\nEjemplo: +34612345678',
@@ -4150,7 +4167,10 @@ function getOrderFeedbackTexts() {
       orderSent: 'Tu pedido se ha enviado correctamente al restaurante. Ahora está pendiente de confirmación.'
     },
     en: {
+      nameRequired: 'Please enter your name to continue.',
+      phoneRequired: 'Please enter your phone number to continue.',
       namePhoneRequired: 'Please enter your name and phone number to continue.',
+      dateTimeRequired: 'Please enter the preferred date and time.',
       cartEmpty: 'Add at least one item to your cart before confirming your order.',
       requiredReviewFields: 'Please complete the required order information.',
       invalidPhone: 'Please enter a valid phone number.\nExample: +34612345678',
@@ -4158,7 +4178,10 @@ function getOrderFeedbackTexts() {
       orderSent: 'Your order has been sent to the restaurant. It is now awaiting confirmation.'
     },
     nl: {
+      nameRequired: 'Vul je naam in om verder te gaan.',
+      phoneRequired: 'Vul je telefoonnummer in om verder te gaan.',
       namePhoneRequired: 'Vul je naam en telefoonnummer in om verder te gaan.',
+      dateTimeRequired: 'Vul de gewenste datum en het gewenste uur in.',
       cartEmpty: 'Voeg minstens één artikel toe aan je mandje voordat je je bestelling bevestigt.',
       requiredReviewFields: 'Vul de verplichte bestelgegevens in.',
       invalidPhone: 'Geef een geldig telefoonnummer op.\nVoorbeeld: +34612345678',
@@ -4170,9 +4193,21 @@ function getOrderFeedbackTexts() {
   return texts[currentLang] || texts.fr;
 }
 
-function openOrderReview() {
-  const feedbackTexts = getOrderFeedbackTexts();
+function getMissingOrderFieldFeedbackKey({ name, phone, date, time }) {
+  const missingName = !String(name || '').trim();
+  const missingPhone = !String(phone || '').trim();
+  const missingDate = !String(date || '').trim();
+  const missingTime = !String(time || '').trim();
 
+  if (missingName && missingPhone) return 'namePhoneRequired';
+  if (missingName) return 'nameRequired';
+  if (missingPhone) return 'phoneRequired';
+  if (missingDate || missingTime) return 'dateTimeRequired';
+
+  return 'requiredReviewFields';
+}
+
+function openOrderReview() {
   if (!siteConfig.modules?.ordering) {
     orderReviewOpen = false;
     renderMenu();
@@ -4180,7 +4215,7 @@ function openOrderReview() {
   }
 
   if (!cart.length) {
-    setOrderFeedback('error', feedbackTexts.cartEmpty);
+    setOrderFeedback('error', 'cartEmpty');
     orderReviewOpen = false;
     renderMenu();
     return;
@@ -4190,7 +4225,15 @@ function openOrderReview() {
   orderForm.phone = (orderForm.phone || '').trim();
 
   if (!orderForm.name || !orderForm.phone) {
-    setOrderFeedback('error', feedbackTexts.namePhoneRequired);
+    setOrderFeedback(
+      'error',
+      getMissingOrderFieldFeedbackKey({
+        name: orderForm.name,
+        phone: orderForm.phone,
+        date: orderForm.date,
+        time: orderForm.time
+      })
+    );
     orderReviewOpen = false;
     renderMenu();
     return;
@@ -4237,8 +4280,6 @@ function editOrderCustomerInfo() {
 }
 
 async function validateOrderReview() {
-  const feedbackTexts = getOrderFeedbackTexts();
-
   if (!siteConfig.modules?.ordering) {
     orderReviewOpen = false;
     renderMenu();
@@ -4251,14 +4292,22 @@ async function validateOrderReview() {
   orderForm.time = (orderForm.time || '').trim();
 
   if (!cart.length) {
-    setOrderFeedback('error', feedbackTexts.cartEmpty);
+    setOrderFeedback('error', 'cartEmpty');
     orderReviewOpen = false;
     renderMenu();
     return;
   }
 
   if (!orderForm.name || !orderForm.phone || !orderForm.date || !orderForm.time) {
-    setOrderFeedback('error', feedbackTexts.requiredReviewFields);
+    setOrderFeedback(
+      'error',
+      getMissingOrderFieldFeedbackKey({
+        name: orderForm.name,
+        phone: orderForm.phone,
+        date: orderForm.date,
+        time: orderForm.time
+      })
+    );
     renderMenu();
     return;
   }
@@ -4268,7 +4317,7 @@ async function validateOrderReview() {
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
   if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    setOrderFeedback('error', feedbackTexts.invalidPhone);
+    setOrderFeedback('error', 'invalidPhone');
     renderMenu();
     return;
   }
@@ -4325,12 +4374,12 @@ async function validateOrderReview() {
     await saveOrderRequestLocally(orderRequest);
   } catch (error) {
     console.error('TapCarta order Supabase insert error:', error);
-    setOrderFeedback('error', feedbackTexts.sendError);
+    setOrderFeedback('error', 'sendError');
     renderMenu();
     return;
   }
 
-  setOrderFeedback('success', feedbackTexts.orderSent);
+  setOrderFeedback('success', 'orderSent');
 
   cart = [];
   orderReviewOpen = false;

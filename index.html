@@ -2139,7 +2139,6 @@ function getBookingStorageKey() {
 function getLastBookingStorageKey() {
   return 'tapcarta_last_booking_request';
 }
-
 async function readBookingRequestsFromStorage() {
   if (LIVE_REQUESTS_ENABLED) {
     try {
@@ -2156,6 +2155,8 @@ async function readBookingRequestsFromStorage() {
         ? data.map(mapLiveBookingRowToRequest).filter(Boolean)
         : [];
 
+      writeBookingRequestsToStorage(liveRequests.slice(0, 20));
+
       try {
         const rawLastBooking = localStorage.getItem(getLastBookingStorageKey());
         const parsedLastBooking = rawLastBooking ? JSON.parse(rawLastBooking) : null;
@@ -2166,31 +2167,13 @@ async function readBookingRequestsFromStorage() {
           const syncedLastBooking = mapLiveBookingRowToRequest(liveRow);
 
           if (syncedLastBooking) {
-            const localDecisionStatus = parsedLastBooking?.status || '';
-            const keepLocalDecision =
-              ['accepted_by_client', 'rejected_by_client'].includes(localDecisionStatus) &&
-              !['confirmed', 'cancelled', 'refused'].includes(syncedLastBooking.status || '');
-
-            const mergedLastBooking = keepLocalDecision
-              ? {
-                  ...syncedLastBooking,
-                  ...parsedLastBooking,
-                  status: parsedLastBooking.status,
-                  updatedAt: parsedLastBooking.updatedAt || syncedLastBooking.updatedAt,
-                  clientDecision: parsedLastBooking.clientDecision || '',
-                  clientDecisionAt: parsedLastBooking.clientDecisionAt || '',
-                  restaurantResponse: {
-                    ...(syncedLastBooking.restaurantResponse || {}),
-                    ...(parsedLastBooking.restaurantResponse || {})
-                  }
-                }
-              : {
-                  ...syncedLastBooking,
-                  restaurantResponse: {
-                    ...(syncedLastBooking.restaurantResponse || {}),
-                    ...(parsedLastBooking?.restaurantResponse || {})
-                  }
-                };
+            const mergedLastBooking = {
+              ...syncedLastBooking,
+              restaurantResponse: {
+                ...(syncedLastBooking.restaurantResponse || {}),
+                ...(parsedLastBooking?.restaurantResponse || {})
+              }
+            };
 
             localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedLastBooking));
           }
@@ -3919,9 +3902,10 @@ function openCurrentOrderModal() {
   openClientHistoryModal(tHistory.currentOrder, renderLastOrderRequestCard());
 }
 
-function openLastOrdersModal() {
+async function openLastOrdersModal() {
   const tHistory = getClientHistoryTexts();
-  const orders = readOrderRequestsFromStorage()
+
+  const orders = (await readOrderRequestsFromSource())
     .filter((orderRequest) => orderRequest && orderRequest.order && orderRequest.customer)
     .slice(0, 5);
 
@@ -3937,31 +3921,22 @@ function openCurrentBookingModal() {
   openClientHistoryModal(tHistory.currentBooking, renderLastBookingRequestCard());
 }
 
-function openLastBookingsModal() {
+async function openLastBookingsModal() {
   const tHistory = getClientHistoryTexts();
 
-  let bookings = [];
-
-  try {
-    const raw = localStorage.getItem(getBookingStorageKey());
-    const parsed = raw ? JSON.parse(raw) : [];
-    bookings = Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    bookings = [];
-  }
+  let bookings = (await readBookingRequestsFromStorage())
+    .filter((bookingRequest) => bookingRequest && bookingRequest.booking && bookingRequest.customer);
 
   const lastBooking = getLastBookingRequest();
 
-  if (lastBooking) {
+  if (!LIVE_REQUESTS_ENABLED && lastBooking) {
     bookings = [
       lastBooking,
       ...bookings.filter((bookingRequest) => String(bookingRequest?.requestId) !== String(lastBooking.requestId))
     ];
   }
 
-  bookings = bookings
-    .filter((bookingRequest) => bookingRequest && bookingRequest.booking && bookingRequest.customer)
-    .slice(0, 5);
+  bookings = bookings.slice(0, 5);
 
   const contentHtml = bookings.length
     ? bookings.map((bookingRequest) => renderClientBookingHistoryItem(bookingRequest)).join('')

@@ -3534,7 +3534,85 @@ function getLastOrderRequest() {
   }
 }
 
-function updateLastOrderRequestLocally(updatedOrderRequest) {
+async function updateStoredOrderRequest(updatedOrderRequest) {
+  if (!updatedOrderRequest || !updatedOrderRequest.requestId) return null;
+
+  const liveRequestId = updatedOrderRequest.liveRequestId || updatedOrderRequest.requestId || null;
+
+  if (LIVE_REQUESTS_ENABLED && liveRequestId) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('requests')
+        .update({
+          status: updatedOrderRequest?.status || 'pending',
+          restaurant_message: updatedOrderRequest?.restaurantResponse?.message || ''
+        })
+        .eq('id', liveRequestId)
+        .eq('restaurant_id', updatedOrderRequest?.restaurantId || LIVE_RESTAURANT_ID)
+        .eq('type', 'order')
+        .select('*')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        console.warn('Supabase order update: aucune ligne mise à jour pour id =', liveRequestId);
+        alert(`Supabase n'a mis à jour aucune commande.\nID utilisé : ${liveRequestId}`);
+        return updatedOrderRequest;
+      }
+
+      const syncedRequest = mapLiveOrderRowToRequest(data) || updatedOrderRequest;
+      const mergedRequest = {
+        ...updatedOrderRequest,
+        ...syncedRequest,
+        liveRequestId: syncedRequest.liveRequestId || liveRequestId,
+        requestId: syncedRequest.requestId || liveRequestId,
+        status: syncedRequest.status || updatedOrderRequest.status,
+        updatedAt: syncedRequest.updatedAt || updatedOrderRequest.updatedAt,
+        clientDecision: updatedOrderRequest.clientDecision || '',
+        clientDecisionAt: updatedOrderRequest.clientDecisionAt || '',
+        restaurantResponse: {
+          ...(syncedRequest.restaurantResponse || {}),
+          ...(updatedOrderRequest.restaurantResponse || {})
+        }
+      };
+
+      const existingRequests = readOrderRequestsFromStorage();
+      const withoutDuplicate = existingRequests.filter(
+        (entry) => String(entry?.requestId) !== String(mergedRequest.requestId)
+      );
+      const updatedRequests = [mergedRequest, ...withoutDuplicate].slice(0, 20);
+
+      writeOrderRequestsToStorage(updatedRequests);
+      localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(mergedRequest));
+
+      return mergedRequest;
+    } catch (error) {
+      console.error('Supabase order update error:', error);
+      alert(`Erreur Supabase update commande : ${error?.message || error}`);
+      return updatedOrderRequest;
+    }
+  }
+
+  const existingRequests = readOrderRequestsFromStorage();
+  const updatedRequests = existingRequests.map((entry) =>
+    String(entry?.requestId) === String(updatedOrderRequest?.requestId)
+      ? {
+          ...entry,
+          ...updatedOrderRequest,
+          restaurantResponse: {
+            ...(entry?.restaurantResponse || {}),
+            ...(updatedOrderRequest?.restaurantResponse || {})
+          }
+        }
+      : entry
+  );
+
+  writeOrderRequestsToStorage(updatedRequests);
+  localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(updatedOrderRequest));
+
+  return updatedOrderRequest;
+}
   const existingRequests = readOrderRequestsFromStorage();
   const updatedRequests = existingRequests.map((entry) =>
     String(entry?.requestId) === String(updatedOrderRequest?.requestId)
@@ -3609,7 +3687,127 @@ function getOrderClientDecisionTexts() {
   };
 }
 
-window.acceptLastOrderModification = function() {
+window.acceptLastOrderModification = async function() {
+  const orderRequest = getLastOrderRequest();
+  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
+
+  const tDecision = getOrderClientDecisionTexts();
+
+  if (!window.confirm(tDecision.acceptConfirm)) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedOrderRequest = {
+    ...orderRequest,
+    status: 'accepted_by_client',
+    updatedAt: nowIso,
+    clientDecisionAt: nowIso,
+    clientDecision: 'accepted',
+    restaurantResponse: {
+      ...(orderRequest.restaurantResponse || {}),
+      clientDecision: 'accepted',
+      clientDecisionAt: nowIso
+    }
+  };
+
+  const syncedOrderRequest = await updateStoredOrderRequest(updatedOrderRequest);
+
+  if (syncedOrderRequest) {
+    alert(tDecision.acceptedMessage);
+    await syncLastOrderRequestFromSource();
+    refreshClientRequestCards();
+  }
+};
+
+window.rejectLastOrderModification = async function() {
+  const orderRequest = getLastOrderRequest();
+  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
+
+  const tDecision = getOrderClientDecisionTexts();
+
+  if (!window.confirm(tDecision.rejectConfirm)) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedOrderRequest = {
+    ...orderRequest,
+    status: 'rejected_by_client',
+    updatedAt: nowIso,
+    clientDecisionAt: nowIso,
+    clientDecision: 'rejected',
+    restaurantResponse: {
+      ...(orderRequest.restaurantResponse || {}),
+      clientDecision: 'rejected',
+      clientDecisionAt: nowIso
+    }
+  };
+
+  const syncedOrderRequest = await updateStoredOrderRequest(updatedOrderRequest);
+
+  if (syncedOrderRequest) {
+    alert(tDecision.rejectedMessage);
+    await syncLastOrderRequestFromSource();
+    refreshClientRequestCards();
+  }
+};
+  const orderRequest = getLastOrderRequest();
+  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
+
+  const tDecision = getOrderClientDecisionTexts();
+
+  if (!window.confirm(tDecision.acceptConfirm)) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedOrderRequest = {
+    ...orderRequest,
+    status: 'accepted_by_client',
+    updatedAt: nowIso,
+    clientDecisionAt: nowIso,
+    clientDecision: 'accepted',
+    restaurantResponse: {
+      ...(orderRequest.restaurantResponse || {}),
+      clientDecision: 'accepted',
+      clientDecisionAt: nowIso
+    }
+  };
+
+  updateLastOrderRequestLocally(updatedOrderRequest);
+  alert(tDecision.acceptedMessage);
+  refreshClientRequestCards();
+};
+
+window.rejectLastOrderModification = function() {
+  const orderRequest = getLastOrderRequest();
+  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
+
+  const tDecision = getOrderClientDecisionTexts();
+
+  if (!window.confirm(tDecision.rejectConfirm)) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedOrderRequest = {
+    ...orderRequest,
+    status: 'rejected_by_client',
+    updatedAt: nowIso,
+    clientDecisionAt: nowIso,
+    clientDecision: 'rejected',
+    restaurantResponse: {
+      ...(orderRequest.restaurantResponse || {}),
+      clientDecision: 'rejected',
+      clientDecisionAt: nowIso
+    }
+  };
+
+  updateLastOrderRequestLocally(updatedOrderRequest);
+  alert(tDecision.rejectedMessage);
+  refreshClientRequestCards();
+};
   const orderRequest = getLastOrderRequest();
   if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
 

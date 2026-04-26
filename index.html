@@ -1771,6 +1771,7 @@ let orderForm = {
   note: ''
 };
 let orderFeedback = null;
+let bookingFeedback = null;
 let bookingForm = {
   name: '',
   phone: '',
@@ -3053,8 +3054,113 @@ function renderLastBookingRequestCard() {
   `;
 }
 
+function setBookingFeedback(type, key, fallbackMessage = '') {
+  bookingFeedback = {
+    type,
+    key: String(key || '').trim(),
+    fallbackMessage: String(fallbackMessage || '').trim()
+  };
+}
+
+function clearBookingFeedback() {
+  bookingFeedback = null;
+
+  const existingBlock = document.getElementById('booking-feedback-block');
+  if (existingBlock) {
+    existingBlock.remove();
+  }
+}
+
+function getBookingFeedbackTexts() {
+  const texts = {
+    fr: {
+      nameRequired: 'Veuillez indiquer votre nom pour continuer.',
+      phoneRequired: 'Veuillez indiquer votre numéro de téléphone pour continuer.',
+      namePhoneRequired: 'Veuillez indiquer votre nom et votre téléphone pour continuer.',
+      dateTimePeopleRequired: 'Veuillez compléter la date, l’heure et le nombre de personnes.',
+      invalidPhone: 'Veuillez entrer un numéro de téléphone valide.\nExemple : +34612345678',
+      invalidPeople: 'Le nombre de personnes doit être au minimum de 1.',
+      sendRequired: 'Veuillez compléter les informations obligatoires de votre réservation.'
+    },
+    es: {
+      nameRequired: 'Indica tu nombre para continuar.',
+      phoneRequired: 'Indica tu número de teléfono para continuar.',
+      namePhoneRequired: 'Indica tu nombre y tu teléfono para continuar.',
+      dateTimePeopleRequired: 'Completa la fecha, la hora y el número de personas.',
+      invalidPhone: 'Introduce un número de teléfono válido.\nEjemplo: +34612345678',
+      invalidPeople: 'El número de personas debe ser como mínimo 1.',
+      sendRequired: 'Completa la información obligatoria de tu reserva.'
+    },
+    en: {
+      nameRequired: 'Please enter your name to continue.',
+      phoneRequired: 'Please enter your phone number to continue.',
+      namePhoneRequired: 'Please enter your name and phone number to continue.',
+      dateTimePeopleRequired: 'Please complete the date, time and number of guests.',
+      invalidPhone: 'Please enter a valid phone number.\nExample: +34612345678',
+      invalidPeople: 'The number of guests must be at least 1.',
+      sendRequired: 'Please complete the required booking information.'
+    },
+    nl: {
+      nameRequired: 'Vul je naam in om verder te gaan.',
+      phoneRequired: 'Vul je telefoonnummer in om verder te gaan.',
+      namePhoneRequired: 'Vul je naam en telefoonnummer in om verder te gaan.',
+      dateTimePeopleRequired: 'Vul de datum, het uur en het aantal personen in.',
+      invalidPhone: 'Geef een geldig telefoonnummer op.\nVoorbeeld: +34612345678',
+      invalidPeople: 'Het aantal personen moet minstens 1 zijn.',
+      sendRequired: 'Vul de verplichte reservatiegegevens in.'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function getMissingBookingFieldFeedbackKey({ name, phone, date, time, people }) {
+  const missingName = !String(name || '').trim();
+  const missingPhone = !String(phone || '').trim();
+  const missingDate = !String(date || '').trim();
+  const missingTime = !String(time || '').trim();
+  const missingPeople = !String(people || '').trim();
+
+  if (missingName && missingPhone) return 'namePhoneRequired';
+  if (missingName) return 'nameRequired';
+  if (missingPhone) return 'phoneRequired';
+  if (missingDate || missingTime || missingPeople) return 'dateTimePeopleRequired';
+
+  return 'sendRequired';
+}
+
+function getCurrentBookingFeedbackMessage() {
+  if (!bookingFeedback?.key) return '';
+
+  const feedbackTexts = getBookingFeedbackTexts();
+
+  return feedbackTexts[bookingFeedback.key] || bookingFeedback.fallbackMessage || '';
+}
+
+function renderBookingFeedbackMessage() {
+  const feedbackMessage = getCurrentBookingFeedbackMessage();
+
+  if (!feedbackMessage) {
+    return '';
+  }
+
+  const isSuccess = bookingFeedback.type === 'success';
+
+  return `
+    <div
+      id="booking-feedback-block"
+      class="mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${
+        isSuccess
+          ? 'border-emerald-400/40 bg-emerald-500/12 text-emerald-100'
+          : 'border-red-400/45 bg-red-950/55 text-red-50'
+      }"
+    >
+      ${escapeOrderFeedbackHtml(feedbackMessage).replace(/\n/g, '<br>')}
+    </div>
+  `;
+}
+
 async function validateAndSubmitBooking() {
-  const tBooking = getBookingTexts(currentLang);
 
   bookingForm.name = (bookingForm.name || '').trim();
   bookingForm.phone = (bookingForm.phone || '').trim();
@@ -3064,7 +3170,16 @@ async function validateAndSubmitBooking() {
   bookingForm.note = (bookingForm.note || '').trim();
 
   if (!bookingForm.name || !bookingForm.phone || !bookingForm.date || !bookingForm.time || !bookingForm.people) {
-    alert(tBooking.bookingRequiredAlert);
+    setBookingFeedback(
+      'error',
+      getMissingBookingFieldFeedbackKey({
+        name: bookingForm.name,
+        phone: bookingForm.phone,
+        date: bookingForm.date,
+        time: bookingForm.time,
+        people: bookingForm.people
+      })
+    );
     renderMenu();
     return;
   }
@@ -3074,23 +3189,19 @@ async function validateAndSubmitBooking() {
   const phonePattern = /^\+?[0-9]{8,15}$/;
 
   if (!phonePattern.test(normalizedPhone) || digitCount < 8) {
-    alert(`${tBooking.bookingInvalidPhoneAlert}\n${phoneExampleByLang[currentLang] || phoneExampleByLang.fr}`);
+    setBookingFeedback('error', 'invalidPhone');
     renderMenu();
     return;
   }
 
   if (Number(bookingForm.people) < 1) {
-    alert(({
-  fr: 'Le nombre de personnes doit être au minimum de 1.',
-  es: 'El número de personas debe ser como mínimo 1.',
-  en: 'The number of guests must be at least 1.',
-  nl: 'Het aantal personen moet minstens 1 zijn.'
-})[currentLang] || 'Le nombre de personnes doit être au minimum de 1.');
+    setBookingFeedback('error', 'invalidPeople');
     renderMenu();
     return;
   }
 
   bookingForm.phone = normalizedPhone;
+  clearBookingFeedback();
 
   const existingBookingRequests = LIVE_REQUESTS_ENABLED
   ? await fetchLiveRequestsByType('booking')
@@ -5529,6 +5640,8 @@ ${bookingMode ? `
       </div>
 
       <div id="client-booking-card-slot"></div>
+
+      ${renderBookingFeedbackMessage()}
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>

@@ -3533,7 +3533,6 @@ function getLastOrderRequest() {
     return null;
   }
 }
-
 async function updateStoredOrderRequest(updatedOrderRequest) {
   if (!updatedOrderRequest || !updatedOrderRequest.requestId) return null;
 
@@ -3612,23 +3611,6 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
   localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(updatedOrderRequest));
 
   return updatedOrderRequest;
-}
-  const existingRequests = readOrderRequestsFromStorage();
-  const updatedRequests = existingRequests.map((entry) =>
-    String(entry?.requestId) === String(updatedOrderRequest?.requestId)
-      ? {
-          ...entry,
-          ...updatedOrderRequest,
-          restaurantResponse: {
-            ...(entry?.restaurantResponse || {}),
-            ...(updatedOrderRequest?.restaurantResponse || {})
-          }
-        }
-      : entry
-  );
-
-  writeOrderRequestsToStorage(updatedRequests);
-  localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(updatedOrderRequest));
 }
 
 function getOrderClientDecisionTexts() {
@@ -3751,118 +3733,6 @@ window.rejectLastOrderModification = async function() {
     await syncLastOrderRequestFromSource();
     refreshClientRequestCards();
   }
-};
-  const orderRequest = getLastOrderRequest();
-  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
-
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.acceptConfirm)) {
-    return;
-  }
-
-  const nowIso = new Date().toISOString();
-  const updatedOrderRequest = {
-    ...orderRequest,
-    status: 'accepted_by_client',
-    updatedAt: nowIso,
-    clientDecisionAt: nowIso,
-    clientDecision: 'accepted',
-    restaurantResponse: {
-      ...(orderRequest.restaurantResponse || {}),
-      clientDecision: 'accepted',
-      clientDecisionAt: nowIso
-    }
-  };
-
-  updateLastOrderRequestLocally(updatedOrderRequest);
-  alert(tDecision.acceptedMessage);
-  refreshClientRequestCards();
-};
-
-window.rejectLastOrderModification = function() {
-  const orderRequest = getLastOrderRequest();
-  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
-
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.rejectConfirm)) {
-    return;
-  }
-
-  const nowIso = new Date().toISOString();
-  const updatedOrderRequest = {
-    ...orderRequest,
-    status: 'rejected_by_client',
-    updatedAt: nowIso,
-    clientDecisionAt: nowIso,
-    clientDecision: 'rejected',
-    restaurantResponse: {
-      ...(orderRequest.restaurantResponse || {}),
-      clientDecision: 'rejected',
-      clientDecisionAt: nowIso
-    }
-  };
-
-  updateLastOrderRequestLocally(updatedOrderRequest);
-  alert(tDecision.rejectedMessage);
-  refreshClientRequestCards();
-};
-  const orderRequest = getLastOrderRequest();
-  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
-
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.acceptConfirm)) {
-    return;
-  }
-
-  const nowIso = new Date().toISOString();
-  const updatedOrderRequest = {
-    ...orderRequest,
-    status: 'accepted_by_client',
-    updatedAt: nowIso,
-    clientDecisionAt: nowIso,
-    clientDecision: 'accepted',
-    restaurantResponse: {
-      ...(orderRequest.restaurantResponse || {}),
-      clientDecision: 'accepted',
-      clientDecisionAt: nowIso
-    }
-  };
-
-  updateLastOrderRequestLocally(updatedOrderRequest);
-  alert(tDecision.acceptedMessage);
-  refreshClientRequestCards();
-};
-
-window.rejectLastOrderModification = function() {
-  const orderRequest = getLastOrderRequest();
-  if (!orderRequest || (orderRequest.status || 'sent') !== 'modified') return;
-
-  const tDecision = getOrderClientDecisionTexts();
-
-  if (!window.confirm(tDecision.rejectConfirm)) {
-    return;
-  }
-
-  const nowIso = new Date().toISOString();
-  const updatedOrderRequest = {
-    ...orderRequest,
-    status: 'rejected_by_client',
-    updatedAt: nowIso,
-    clientDecisionAt: nowIso,
-    clientDecision: 'rejected',
-    restaurantResponse: {
-      ...(orderRequest.restaurantResponse || {}),
-      clientDecision: 'rejected',
-      clientDecisionAt: nowIso
-    }
-  };
-
-  updateLastOrderRequestLocally(updatedOrderRequest);
-  alert(tDecision.rejectedMessage);
-  refreshClientRequestCards();
 };
 
 function getOrderStatusLabel(status) {

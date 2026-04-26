@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.7';
+    const APP_VERSION = 'V1.2.8';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -4827,7 +4827,42 @@ function renderClientSyncUnavailableCard(type) {
   `;
 }
 
+function getClientOrderTrackingSnapshot() {
+  const orderRequest = getLastOrderRequest();
+
+  if (!orderRequest || !orderRequest.requestId) {
+    return null;
+  }
+
+  return {
+    requestId: String(orderRequest.requestId),
+    status: orderRequest.status || 'pending'
+  };
+}
+
+function shouldFocusClientOrderCardAfterRefresh(previousSnapshot, nextSnapshot) {
+  if (!orderMode) return false;
+  if (!previousSnapshot || !nextSnapshot) return false;
+  if (previousSnapshot.requestId !== nextSnapshot.requestId) return false;
+  if (previousSnapshot.status === nextSnapshot.status) return false;
+  if (isFinalClientOrderStatus(nextSnapshot.status)) return false;
+
+  return true;
+}
+
+function focusClientOrderCardAfterRefresh() {
+  requestAnimationFrame(() => {
+    const orderCard = document.getElementById('client-order-card');
+
+    if (orderCard) {
+      orderCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+}
+
 async function refreshClientRequestCards() {
+  const previousOrderSnapshot = getClientOrderTrackingSnapshot();
+
   if (LIVE_REQUESTS_ENABLED) {
     try {
       await syncLastOrderRequestFromSource();
@@ -4838,6 +4873,9 @@ async function refreshClientRequestCards() {
       clientBookingSyncUnavailable = true;
     }
   }
+
+  const nextOrderSnapshot = getClientOrderTrackingSnapshot();
+  const shouldFocusOrderCard = shouldFocusClientOrderCardAfterRefresh(previousOrderSnapshot, nextOrderSnapshot);
 
   const orderSlot = document.getElementById('client-order-card-slot');
   const bookingSlot = document.getElementById('client-booking-card-slot');
@@ -4852,6 +4890,10 @@ async function refreshClientRequestCards() {
     bookingSlot.innerHTML = clientBookingSyncUnavailable
       ? renderClientSyncUnavailableCard('booking')
       : renderLastBookingRequestCard();
+  }
+
+  if (shouldFocusOrderCard) {
+    focusClientOrderCardAfterRefresh();
   }
 
   if (window.lucide) {

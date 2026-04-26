@@ -3408,22 +3408,21 @@ async function syncLastOrderRequestFromSource() {
     const liveRequestId = parsedLastOrder?.liveRequestId || parsedLastOrder?.requestId || null;
 
     if (!liveRequestId) {
-      return parsedLastOrder || null;
+      return null;
     }
 
     const liveRow = await fetchLiveRequestById(liveRequestId, 'order');
     const syncedLastOrder = mapLiveOrderRowToRequest(liveRow);
 
     if (!syncedLastOrder) {
-      return parsedLastOrder || null;
+      return null;
     }
 
     const mergedLastOrder = {
-      ...(parsedLastOrder || {}),
       ...syncedLastOrder,
       restaurantResponse: {
-        ...(parsedLastOrder?.restaurantResponse || {}),
-        ...(syncedLastOrder.restaurantResponse || {})
+        ...(syncedLastOrder.restaurantResponse || {}),
+        ...(parsedLastOrder?.restaurantResponse || {})
       }
     };
 
@@ -3439,7 +3438,7 @@ async function syncLastOrderRequestFromSource() {
     return mergedLastOrder;
   } catch (error) {
     console.error('Supabase order sync error:', error);
-    return getLastOrderRequest();
+    return null;
   }
 }
 
@@ -3465,7 +3464,7 @@ async function readOrderRequestsFromSource() {
       return liveOrders;
     } catch (error) {
       console.error('Supabase order read error:', error);
-      return readOrderRequestsFromStorage();
+      return [];
     }
   }
 
@@ -4022,23 +4021,29 @@ function renderClientOrderHistoryItem(orderRequest) {
 
 function renderClientBookingHistoryItem(bookingRequest) {
   const status = bookingRequest.status || 'pending';
-  const statusLabel = isFinalClientBookingStatus(status)
-    ? getBookingStatusLabel(status)
+  const statusLabel = getBookingStatusLabel(status);
+
+  const statusClass = isFinalClientBookingStatus(status)
+    ? (
+        status === 'arrived'
+          ? 'text-emerald-200'
+          : status === 'presence_unknown_no_action'
+            ? 'text-gold'
+            : 'text-red-200'
+      )
     : (
-        currentLang === 'es'
-          ? 'Reserva cerrada'
-          : currentLang === 'en'
-            ? 'Booking closed'
-            : currentLang === 'nl'
-              ? 'Reservatie afgesloten'
-              : 'Réservation clôturée'
+        status === 'confirmed' || status === 'accepted_by_client'
+          ? 'text-emerald-200'
+          : status === 'processing' || status === 'modified'
+            ? 'text-sky-100'
+            : 'text-amber-100'
       );
 
   return `
     <div class="rounded-2xl border border-gold/20 bg-black/20 p-4">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div class="text-sm font-semibold text-gold">${escapeBookingHtml(statusLabel)}</div>
+          <div class="text-sm font-semibold ${statusClass}">${escapeBookingHtml(statusLabel)}</div>
           <div class="mt-1 text-xs text-cream/65">
             ${escapeBookingHtml(formatBookingDateForDisplay(bookingRequest.booking?.date || ''))}
             · ${escapeBookingHtml(bookingRequest.booking?.time || '-')}

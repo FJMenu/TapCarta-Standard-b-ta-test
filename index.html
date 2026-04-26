@@ -2646,7 +2646,11 @@ window.closeBookingSummaryModal = function() {
   removeBookingSummaryModal();
 };
 
-function viewLastBookingRequest() {
+async function viewLastBookingRequest() {
+  if (LIVE_REQUESTS_ENABLED) {
+    await readBookingRequestsFromStorage();
+  }
+
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest) return;
 
@@ -3222,10 +3226,16 @@ async function validateAndSubmitBooking() {
   const isEditingExistingBooking = Boolean(existingBookingRequest);
 
   if (existingBookingRequest) {
-    await updateStoredBookingRequest(bookingRequest);
+    const syncedBookingRequest = await updateStoredBookingRequest(bookingRequest);
+
+    if (!syncedBookingRequest) {
+      renderMenu();
+      return;
+    }
+
     bookingRequests = LIVE_REQUESTS_ENABLED
-  ? await fetchLiveRequestsByType('booking')
-  : await readBookingRequestsFromStorage();
+      ? await fetchLiveRequestsByType('booking')
+      : await readBookingRequestsFromStorage();
   } else {
     bookingRequests = await saveBookingRequestLocally(bookingRequest);
   }
@@ -4562,7 +4572,15 @@ function getClientRequestRefreshTexts() {
 function hasPendingClientBookingRequest() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest) return false;
-  return ['pending', 'processing'].includes(bookingRequest.status || 'pending');
+
+  return [
+    'pending',
+    'processing',
+    'modified',
+    'accepted_by_client',
+    'rejected_by_client',
+    'confirmed'
+  ].includes(bookingRequest.status || 'pending');
 }
 
 function hasPendingClientOrderRequest() {
@@ -4596,7 +4614,16 @@ function renderClientRequestRefreshPanel() {
   `;
 }
 
-function refreshClientRequestCards() {
+async function refreshClientRequestCards() {
+  if (LIVE_REQUESTS_ENABLED) {
+    try {
+      await syncLastOrderRequestFromSource();
+      await readBookingRequestsFromStorage();
+    } catch (error) {
+      console.error('Supabase client cards refresh error:', error);
+    }
+  }
+
   const orderSlot = document.getElementById('client-order-card-slot');
   const bookingSlot = document.getElementById('client-booking-card-slot');
 

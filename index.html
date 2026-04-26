@@ -2685,6 +2685,11 @@ window.closeBookingSummaryModal = function() {
 async function viewLastBookingRequest() {
   if (LIVE_REQUESTS_ENABLED) {
     await readBookingRequestsFromStorage();
+
+    if (clientBookingSyncUnavailable) {
+      openClientHistoryModal(getClientHistoryTexts().currentBooking, renderClientSyncUnavailableCard('booking'));
+      return;
+    }
   }
 
   const bookingRequest = getLastBookingRequest();
@@ -4845,7 +4850,14 @@ function startClientRequestAutoRefresh() {
 
   if (document.hidden) return;
   if (!orderMode && !bookingMode) return;
-  if (!hasPendingClientBookingRequest() && !hasPendingClientOrderRequest()) return;
+
+  const shouldKeepRefreshing =
+    hasPendingClientBookingRequest() ||
+    hasPendingClientOrderRequest() ||
+    clientOrderSyncUnavailable ||
+    clientBookingSyncUnavailable;
+
+  if (!shouldKeepRefreshing) return;
 
   clientRequestAutoRefreshTimer = setInterval(async () => {
     if (bookingMode) {
@@ -4864,7 +4876,7 @@ function startClientRequestAutoRefresh() {
       }
     }
 
-    refreshClientRequestCards();
+    await refreshClientRequestCards();
   }, 30000);
 }
 

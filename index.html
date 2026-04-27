@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.9';
+    const APP_VERSION = 'V1.2.10';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -6658,28 +6658,18 @@ ${!orderMode ? `
       setupClientRequestAutoRefresh();
     }
 
- function ensureFreshHtmlVersion() {
+function ensureFreshHtmlVersion() {
   try {
     const lastLoadedVersion = localStorage.getItem(VERSION_STORAGE_KEY);
-    const reloadDoneForVersion = sessionStorage.getItem(VERSION_RELOAD_FLAG_KEY);
     const currentUrl = new URL(window.location.href);
-    const hasVersionInUrl = currentUrl.searchParams.has('v');
 
-    if (hasVersionInUrl) {
+    if (currentUrl.searchParams.has('v')) {
       currentUrl.searchParams.delete('v');
       window.history.replaceState({}, document.title, currentUrl.toString());
     }
 
     if (lastLoadedVersion !== APP_VERSION) {
       localStorage.setItem(VERSION_STORAGE_KEY, APP_VERSION);
-
-      if (reloadDoneForVersion !== APP_VERSION) {
-        sessionStorage.setItem(VERSION_RELOAD_FLAG_KEY, APP_VERSION);
-        window.location.reload();
-        return true;
-      }
-    } else if (reloadDoneForVersion && reloadDoneForVersion !== APP_VERSION) {
-      sessionStorage.removeItem(VERSION_RELOAD_FLAG_KEY);
     }
   } catch (err) {
     console.warn('Version refresh check failed:', err);

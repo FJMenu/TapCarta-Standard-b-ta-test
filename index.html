@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.10';
+    const APP_VERSION = 'V1.2.11';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -957,15 +957,11 @@ function mapAdminItems(items) {
 
 function resetMenuData() {
   Object.keys(menuData).forEach(categoryKey => {
-    menuData[categoryKey] = [];
+    delete menuData[categoryKey];
   });
 
   Object.keys(menuMeta.categories).forEach(categoryKey => {
-    menuMeta.categories[categoryKey] = {
-      visible: true,
-      order: 9999,
-      updatedAt: null
-    };
+    delete menuMeta.categories[categoryKey];
   });
 
   menuMeta.updatedAt = null;
@@ -1065,14 +1061,14 @@ async function loadRestaurantData() {
   if (Array.isArray(restaurantData?.menu?.categories)) {
     restaurantData.menu.categories.forEach(category => {
       if (!category?.id) return;
-      if (!Object.prototype.hasOwnProperty.call(menuData, category.id)) return;
 
- menuMeta.categories[category.id] = {
+      menuMeta.categories[category.id] = {
         visible: category.visible !== false,
         order: Number.isFinite(category.order) ? category.order : 9999,
         updatedAt: category.updatedAt || null,
-        name: category.name || ''
+        name: category.name || translations[currentLang]?.[category.id] || category.id
       };
+
       if (category.visible === false) {
         menuData[category.id] = [];
         return;
@@ -2027,6 +2023,13 @@ function persistClientActiveView() {
       boissons: 'glass-water',
       allergenes: 'alert-triangle'
     };
+
+    function scrollToMenuCategory(categoryKey) {
+      const target = document.getElementById(`menu-${categoryKey}`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
 
     const allergenVisuals = [
       { key: 'gluten', color: '#B08A22' },
@@ -6314,15 +6317,21 @@ ${!orderMode ? `
 <section class="px-6 py-6 animate-fade-up delay-3" id="menu-start">
   ${!orderMode ? `
     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-snacks').scrollIntoView({behavior:'smooth', block:'start'})">${t.snacks}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-entrees').scrollIntoView({behavior:'smooth', block:'start'})">${t.entrees}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-plats').scrollIntoView({behavior:'smooth', block:'start'})">${t.plats}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-moules').scrollIntoView({behavior:'smooth', block:'start'})">${t.moules}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-desserts').scrollIntoView({behavior:'smooth', block:'start'})">${t.desserts}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-crepes').scrollIntoView({behavior:'smooth', block:'start'})">${t.crepes}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-suggestions').scrollIntoView({behavior:'smooth', block:'start'})">${t.suggestions}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-supplements').scrollIntoView({behavior:'smooth', block:'start'})">${t.supplements}</button>
-      <button class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all" onclick="document.getElementById('menu-boissons').scrollIntoView({behavior:'smooth', block:'start'})">${t.boissons}</button>
+      ${visibleCategoryKeys.map(categoryKey => {
+        const categoryLabel =
+          menuMeta.categories[categoryKey]?.name ||
+          t[categoryKey] ||
+          categoryKey;
+
+        return `
+          <button
+            class="btn-action px-4 py-2.5 rounded-lg border-2 border-gold/60 text-xs font-medium text-cream hover:border-gold hover:bg-gold/10 active:bg-gold/15 transition-all"
+            onclick="scrollToMenuCategory('${categoryKey}')"
+          >
+            ${escapeBookingHtml(categoryLabel)}
+          </button>
+        `;
+      }).join('')}
     </div>
   ` : ''}
 

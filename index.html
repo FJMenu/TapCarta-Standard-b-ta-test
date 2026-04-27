@@ -2263,8 +2263,8 @@ async function syncLastBookingRequestFromSource() {
     const mergedLastBooking = {
       ...syncedLastBooking,
       restaurantResponse: {
-        ...(syncedLastBooking.restaurantResponse || {}),
-        ...(parsedLastBooking?.restaurantResponse || {})
+        ...(parsedLastBooking?.restaurantResponse || {}),
+        ...(syncedLastBooking.restaurantResponse || {})
       }
     };
 
@@ -3551,8 +3551,8 @@ async function syncLastOrderRequestFromSource() {
     const mergedLastOrder = {
       ...syncedLastOrder,
       restaurantResponse: {
-        ...(syncedLastOrder.restaurantResponse || {}),
-        ...(parsedLastOrder?.restaurantResponse || {})
+        ...(parsedLastOrder?.restaurantResponse || {}),
+        ...(syncedLastOrder.restaurantResponse || {})
       }
     };
 

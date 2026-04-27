@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.11';
+    const APP_VERSION = 'V1.2.12';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -933,6 +933,58 @@ function formatAdminPrice(price) {
   return `${numericPrice.toFixed(2).replace('.', ',')} €`;
 }
 
+function getTranslatedMenuField(source, field) {
+  if (!source || typeof source !== 'object') return '';
+
+  const sourceTranslations =
+    source.translations && typeof source.translations === 'object'
+      ? source.translations
+      : {};
+
+  const translatedValue = sourceTranslations?.[currentLang]?.[field];
+
+  if (typeof translatedValue === 'string' && translatedValue.trim()) {
+    return translatedValue.trim();
+  }
+
+  const fallbackValue = source[field];
+
+  if (typeof fallbackValue === 'string' && fallbackValue.trim()) {
+    return fallbackValue.trim();
+  }
+
+  return '';
+}
+
+function getMenuCategoryLabel(categoryKey) {
+  const categoryMeta = menuMeta.categories[categoryKey] || {};
+
+  return (
+    getTranslatedMenuField(categoryMeta, 'name') ||
+    translations[currentLang]?.[categoryKey] ||
+    categoryKey
+  );
+}
+
+function getMenuItemLabel(item) {
+  return (
+    getTranslatedMenuField(item, 'name') ||
+    item?.adminName ||
+    item?.name ||
+    item?.id ||
+    ''
+  );
+}
+
+function getMenuItemSubtitle(item) {
+  return (
+    getTranslatedMenuField(item, 'subtitle') ||
+    item?.adminSubtitle ||
+    item?.subtitle ||
+    ''
+  );
+}
+
 function mapAdminItems(items) {
   if (!Array.isArray(items)) return [];
 
@@ -946,6 +998,12 @@ function mapAdminItems(items) {
     .map(({ rawItem, fallbackIndex }) => ({
       id: rawItem.id || `item-${fallbackIndex + 1}`,
       price: formatAdminPrice(rawItem.price),
+      name: rawItem.name || '',
+      subtitle: rawItem.subtitle || '',
+      translations:
+        rawItem.translations && typeof rawItem.translations === 'object'
+          ? rawItem.translations
+          : {},
       adminName: rawItem.name || '',
       adminSubtitle: rawItem.subtitle || '',
       visible: rawItem.visible !== false,
@@ -1066,7 +1124,11 @@ async function loadRestaurantData() {
         visible: category.visible !== false,
         order: Number.isFinite(category.order) ? category.order : 9999,
         updatedAt: category.updatedAt || null,
-        name: category.name || translations[currentLang]?.[category.id] || category.id
+        name: category.name || '',
+        translations:
+          category.translations && typeof category.translations === 'object'
+            ? category.translations
+            : {}
       };
 
       if (category.visible === false) {
@@ -3448,17 +3510,14 @@ function getBookingPreorderOptions() {
     const categoryMeta = menuMeta.categories[categoryKey] || {};
     if (categoryMeta.visible === false) return;
 
-    const categoryLabel =
-      categoryMeta.name ||
-      translations[currentLang]?.[categoryKey] ||
-      categoryKey;
+    const categoryLabel = getMenuCategoryLabel(categoryKey);
 
     (menuData[categoryKey] || [])
       .filter((item) => item && item.visible !== false && item.available !== false)
       .forEach((item) => {
         options.push({
           id: item.id,
-          name: item.adminName || item.id,
+          name: getMenuItemLabel(item) || item.id,
           categoryLabel
         });
       });
@@ -5367,7 +5426,7 @@ async function validateOrderReview() {
 
   const orderItems = cart.map((cartItem) => {
     const sourceItem = Object.values(menuData).flat().find((menuItem) => menuItem.id === cartItem.id);
-    const itemLabel = sourceItem?.adminName || sourceItem?.name || cartItem.id;
+    const itemLabel = getMenuItemLabel(sourceItem) || cartItem.id;
 
     const numericPrice = sourceItem && sourceItem.price
       ? parseFloat(String(sourceItem.price).replace('€', '').replace(',', '.').trim())
@@ -5668,8 +5727,8 @@ function updateOrderFormTimePart(part, value) {
 
 function renderMenuItem(item, t) {
   const itemData = t.items[item.id] || {};
-  const itemTitle = item.adminName || itemData.name || '';
-  const itemSubtitle = item.adminSubtitle || itemData.subtitle || '';
+  const itemTitle = getMenuItemLabel(item) || itemData.name || '';
+  const itemSubtitle = getMenuItemSubtitle(item) || itemData.subtitle || '';
   const isAvailable = item.available !== false;
   const cartItem = cart.find(selectedItem => selectedItem.id === item.id);
   const selectedQuantity = cartItem?.quantity || 0;
@@ -6032,9 +6091,7 @@ const visibleOrderCategoryKeys =
 
 const menuHTML = visibleOrderCategoryKeys
   .map(categoryKey => {
-    const categoryLabel =
-      menuMeta.categories[categoryKey]?.name ||
-      t[categoryKey];
+    const categoryLabel = getMenuCategoryLabel(categoryKey);
 
     return renderCategory(categoryKey, categoryLabel, t);
   })
@@ -6318,10 +6375,7 @@ ${!orderMode ? `
   ${!orderMode ? `
     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
       ${visibleCategoryKeys.map(categoryKey => {
-        const categoryLabel =
-          menuMeta.categories[categoryKey]?.name ||
-          t[categoryKey] ||
-          categoryKey;
+        const categoryLabel = getMenuCategoryLabel(categoryKey);
 
         return `
           <button
@@ -6367,7 +6421,7 @@ ${!orderMode ? `
           const sourceItem = Object.values(menuData).flat().find(menuItem => menuItem.id === cartItem.id);
           if (!sourceItem) return '';
 
-          const itemLabel = sourceItem.adminName || sourceItem.name || cartItem.id;
+          const itemLabel = getMenuItemLabel(sourceItem) || cartItem.id;
 
           return `
             <div class="flex items-center justify-between gap-3 rounded-lg border border-gold/15 bg-black/10 px-3 py-2">

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.14';
+    const APP_VERSION = 'V1.2.15';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -81,8 +81,36 @@ async function fetchLiveRequestsByType(requestType) {
   return [];
 }
 
+function normalizeStandardRestaurantResponse(row) {
+  const rawRestaurantResponse = (() => {
+    if (row?.restaurant_response && typeof row.restaurant_response === 'object') {
+      return row.restaurant_response;
+    }
+
+    if (typeof row?.restaurant_response === 'string') {
+      try {
+        return JSON.parse(row.restaurant_response);
+      } catch (error) {
+        return {};
+      }
+    }
+
+    return {};
+  })();
+
+  return {
+    ...rawRestaurantResponse,
+    reason: rawRestaurantResponse.reason || row?.status || '',
+    message: rawRestaurantResponse.message || row?.restaurant_message || '',
+    updatedBy: rawRestaurantResponse.updatedBy || (row?.restaurant_message ? 'restaurant' : ''),
+    proposal: rawRestaurantResponse.proposal || null
+  };
+}
+
 function mapLiveBookingRowToRequest(row) {
   if (!row) return null;
+
+  const restaurantResponse = normalizeStandardRestaurantResponse(row);
 
   const preorderItems = Array.isArray(row.items)
     ? row.items.map((item) => ({
@@ -115,16 +143,14 @@ function mapLiveBookingRowToRequest(row) {
       preorderIndicativeEnabled: true,
       preorderItems
     },
-    restaurantResponse: {
-      reason: '',
-      message: row.restaurant_message || '',
-      updatedBy: ''
-    }
+    restaurantResponse
   };
 }
 
 function mapLiveOrderRowToRequest(row) {
   if (!row) return null;
+
+  const restaurantResponse = normalizeStandardRestaurantResponse(row);
 
   const orderItems = Array.isArray(row.items)
     ? row.items.map((item) => {
@@ -169,11 +195,7 @@ function mapLiveOrderRowToRequest(row) {
       items: orderItems,
       totalAmount: Number(totalAmount.toFixed(2))
     },
-    restaurantResponse: {
-      reason: row.status || '',
-      message: row.restaurant_message || '',
-      updatedBy: row.restaurant_message ? 'restaurant' : ''
-    }
+    restaurantResponse
   };
 }
     function getBasePath() {
@@ -2982,8 +3004,13 @@ window.acceptLastBookingModification = async function() {
   const hadOpenBookingSummaryModal = Boolean(document.getElementById('booking-summary-modal'));
   const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
+  const proposedTime = bookingRequest?.restaurantResponse?.proposal?.proposedTime || '';
   const updatedRequest = {
     ...bookingRequest,
+    booking: {
+      ...(bookingRequest.booking || {}),
+      time: proposedTime || bookingRequest?.booking?.time || ''
+    },
     status: 'accepted_by_client',
     updatedAt: nowIso,
     clientDecision: 'accepted',
@@ -3885,6 +3912,10 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
         .from('requests')
         .update({
           status: updatedOrderRequest?.status || 'pending',
+          booking_date: updatedOrderRequest?.order?.date || null,
+          booking_time: updatedOrderRequest?.order?.time || null,
+          items: normalizeRequestItems(updatedOrderRequest?.order?.items || []),
+          note: updatedOrderRequest?.order?.note || '',
           restaurant_message: updatedOrderRequest?.restaurantResponse?.message || ''
         })
         .eq('id', liveRequestId)
@@ -4023,8 +4054,13 @@ window.acceptLastOrderModification = async function() {
 
   const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
+  const proposedTime = orderRequest?.restaurantResponse?.proposal?.proposedTime || '';
   const updatedOrderRequest = {
     ...orderRequest,
+    order: {
+      ...(orderRequest.order || {}),
+      time: proposedTime || orderRequest?.order?.time || ''
+    },
     status: 'accepted_by_client',
     updatedAt: nowIso,
     clientDecisionAt: nowIso,

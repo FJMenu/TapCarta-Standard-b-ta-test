@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.2';
+    const APP_VERSION = 'V1.2.15.3';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -2364,11 +2364,51 @@ function getLastBookingStorageKey() {
 async function readBookingRequestsFromStorage() {
   if (LIVE_REQUESTS_ENABLED) {
     try {
+      const knownRequestIds = new Set();
+
+      try {
+        const rawLastBooking = localStorage.getItem(getLastBookingStorageKey());
+        const parsedLastBooking = rawLastBooking ? JSON.parse(rawLastBooking) : null;
+        const lastBookingId = parsedLastBooking?.liveRequestId || parsedLastBooking?.requestId || null;
+
+        if (lastBookingId) {
+          knownRequestIds.add(String(lastBookingId));
+        }
+      } catch (error) {
+        console.warn('TapCarta: impossible de relire la dernière réservation locale', error);
+      }
+
+      try {
+        const rawBookings = localStorage.getItem(getBookingStorageKey());
+        const parsedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+
+        if (Array.isArray(parsedBookings)) {
+          parsedBookings.forEach((entry) => {
+            const entryId = entry?.liveRequestId || entry?.requestId || null;
+
+            if (entryId) {
+              knownRequestIds.add(String(entryId));
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('TapCarta: impossible de relire les réservations locales', error);
+      }
+
+      const requestIds = Array.from(knownRequestIds);
+
+      if (!requestIds.length) {
+        writeBookingRequestsToStorage([]);
+        clientBookingSyncUnavailable = false;
+        return [];
+      }
+
       const { data, error } = await supabaseClient
         .from('requests')
         .select('*')
         .eq('restaurant_id', LIVE_RESTAURANT_ID)
         .eq('type', 'booking')
+        .in('id', requestIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -3920,11 +3960,51 @@ async function syncLastOrderRequestFromSource() {
 async function readOrderRequestsFromSource() {
   if (LIVE_REQUESTS_ENABLED) {
     try {
+      const knownRequestIds = new Set();
+
+      try {
+        const rawLastOrder = localStorage.getItem(getLastOrderStorageKey());
+        const parsedLastOrder = rawLastOrder ? JSON.parse(rawLastOrder) : null;
+        const lastOrderId = parsedLastOrder?.liveRequestId || parsedLastOrder?.requestId || null;
+
+        if (lastOrderId) {
+          knownRequestIds.add(String(lastOrderId));
+        }
+      } catch (error) {
+        console.warn('TapCarta: impossible de relire la dernière commande locale', error);
+      }
+
+      try {
+        const rawOrders = localStorage.getItem(getOrderStorageKey());
+        const parsedOrders = rawOrders ? JSON.parse(rawOrders) : [];
+
+        if (Array.isArray(parsedOrders)) {
+          parsedOrders.forEach((entry) => {
+            const entryId = entry?.liveRequestId || entry?.requestId || null;
+
+            if (entryId) {
+              knownRequestIds.add(String(entryId));
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('TapCarta: impossible de relire les commandes locales', error);
+      }
+
+      const requestIds = Array.from(knownRequestIds);
+
+      if (!requestIds.length) {
+        writeOrderRequestsToStorage([]);
+        clientOrderSyncUnavailable = false;
+        return [];
+      }
+
       const { data, error } = await supabaseClient
         .from('requests')
         .select('*')
         .eq('restaurant_id', LIVE_RESTAURANT_ID)
         .eq('type', 'order')
+        .in('id', requestIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

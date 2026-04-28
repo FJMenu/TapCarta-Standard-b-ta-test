@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.3';
+    const APP_VERSION = 'V1.2.15.4';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -98,12 +98,34 @@ function normalizeStandardRestaurantResponse(row) {
     return {};
   })();
 
+  const rawModifiedItems = Array.isArray(row?.modified_items)
+    ? row.modified_items
+    : [];
+
+  const timeModification = rawModifiedItems.find((entry) =>
+    entry &&
+    typeof entry === 'object' &&
+    entry.field === 'time' &&
+    entry.proposedTime
+  );
+
+  const proposalFromModifiedItems = timeModification
+    ? {
+        ...(rawRestaurantResponse.proposal || {}),
+        previousTime: timeModification.previousTime || '',
+        proposedTime: timeModification.proposedTime || '',
+        acceptedTime: timeModification.acceptedTime || '',
+        changedAt: timeModification.changedAt || row?.updated_at || null
+      }
+    : rawRestaurantResponse.proposal || null;
+
   return {
     ...rawRestaurantResponse,
-    reason: rawRestaurantResponse.reason || row?.status || '',
-    message: rawRestaurantResponse.message || row?.restaurant_message || '',
-    updatedBy: rawRestaurantResponse.updatedBy || (row?.restaurant_message ? 'restaurant' : ''),
-    proposal: rawRestaurantResponse.proposal || null
+    reason: rawRestaurantResponse.reason || timeModification?.reason || row?.status || '',
+    message: rawRestaurantResponse.message || timeModification?.message || row?.restaurant_message || '',
+    updatedBy: rawRestaurantResponse.updatedBy || timeModification?.updatedBy || (row?.restaurant_message ? 'restaurant' : ''),
+    proposal: proposalFromModifiedItems,
+    modifiedItems: rawModifiedItems
   };
 }
 
@@ -3322,6 +3344,7 @@ function renderLastBookingRequestCard() {
 
   const restaurantMessage = bookingRequest.restaurantResponse?.message || '';
   const proposedTime = bookingRequest.restaurantResponse?.proposal?.proposedTime || '';
+  const previousTime = bookingRequest.restaurantResponse?.proposal?.previousTime || bookingRequest.booking.time || '';
 
   const proposedTimeLabel = currentLang === 'fr'
     ? 'Horaire proposé'
@@ -3330,6 +3353,39 @@ function renderLastBookingRequestCard() {
       : currentLang === 'nl'
         ? 'Voorgesteld uur'
         : 'Proposed time';
+
+  const currentTimeLabel = currentLang === 'fr'
+    ? 'Heure initiale'
+    : currentLang === 'es'
+      ? 'Hora inicial'
+      : currentLang === 'nl'
+        ? 'Oorspronkelijk uur'
+        : 'Initial time';
+
+  const modificationWarningTexts = {
+    fr: {
+      title: 'Le restaurant propose un nouvel horaire',
+      intro: 'Vérifiez bien ce changement avant d’accepter.',
+      accept: 'En cliquant sur “Accepter”, votre réservation sera validée pour ce nouvel horaire.'
+    },
+    es: {
+      title: 'El restaurante propone una nueva hora',
+      intro: 'Revise bien este cambio antes de aceptar.',
+      accept: 'Al hacer clic en “Aceptar”, su reserva quedará validada para esta nueva hora.'
+    },
+    en: {
+      title: 'The restaurant proposes a new time',
+      intro: 'Please check this change carefully before accepting.',
+      accept: 'By clicking “Accept”, your booking will be confirmed for this new time.'
+    },
+    nl: {
+      title: 'Het restaurant stelt een nieuw uur voor',
+      intro: 'Controleer deze wijziging goed voordat u aanvaardt.',
+      accept: 'Door op “Aanvaarden” te klikken, wordt uw reservatie bevestigd voor dit nieuwe uur.'
+    }
+  };
+
+  const modificationWarning = modificationWarningTexts[currentLang] || modificationWarningTexts.fr;
 
   const statusLabel = status === 'accepted_by_client'
     ? tDecision.acceptedStatus
@@ -3492,7 +3548,7 @@ function renderLastBookingRequestCard() {
                 ${escapeBookingHtml(currentTimeLabel)}
               </div>
               <div class="text-lg font-semibold text-cream/80 line-through decoration-red-300/70">
-                ${escapeBookingHtml(bookingRequest.booking.time || '-')}
+                ${escapeBookingHtml(previousTime || '-')}
               </div>
             </div>
 
@@ -5100,6 +5156,7 @@ function renderLastOrderRequestCard() {
   const texts = cardTexts[currentLang] || cardTexts.fr;
   const orderItems = Array.isArray(orderRequest.order.items) ? orderRequest.order.items : [];
   const proposedTime = orderRequest.restaurantResponse?.proposal?.proposedTime || '';
+  const previousTime = orderRequest.restaurantResponse?.proposal?.previousTime || orderRequest.order.time || '';
   const totalAmount = Number(orderRequest.order.totalAmount || 0);
   const isFinalStatus = isFinalClientOrderStatus(status);
 
@@ -5222,7 +5279,7 @@ function renderLastOrderRequestCard() {
                 ${escapeBookingHtml(currentTimeLabel)}
               </div>
               <div class="text-lg font-semibold text-cream/80 line-through decoration-red-300/70">
-                ${escapeBookingHtml(orderRequest.order.time || '-')}
+                ${escapeBookingHtml(previousTime || '-')}
               </div>
             </div>
 

@@ -3157,7 +3157,7 @@ function renderLastBookingRequestCard() {
   const tDecision = getBookingClientDecisionTexts();
   const status = bookingRequest.status || 'pending';
 
-  if (isFinalClientBookingStatus(status)) {
+  if (!isActiveClientBookingStatus(status)) {
     return '';
   }
 
@@ -4198,8 +4198,24 @@ function isFinalClientOrderStatus(status) {
   return ['served', 'not_served', 'refused', 'cancelled', 'cancelled_by_client', 'service_unknown_no_action'].includes(status || '');
 }
 
+function isActiveClientOrderStatus(status) {
+  return ['pending', 'sent', 'processing', 'modified', 'rejected_by_client'].includes(status || 'pending');
+}
+
+function isClientOrderVisibleInHistory(status) {
+  return !isActiveClientOrderStatus(status || 'pending');
+}
+
 function isFinalClientBookingStatus(status) {
   return ['arrived', 'not_arrived', 'refused', 'cancelled', 'cancelled_by_client', 'presence_unknown_no_action'].includes(status || '');
+}
+
+function isActiveClientBookingStatus(status) {
+  return ['pending', 'processing', 'modified', 'rejected_by_client'].includes(status || 'pending');
+}
+
+function isClientBookingVisibleInHistory(status) {
+  return !isActiveClientBookingStatus(status || 'pending');
 }
 
 function openClientHistoryModal(title, contentHtml) {
@@ -4288,7 +4304,7 @@ async function openLastOrdersModal() {
       orderRequest &&
       orderRequest.order &&
       orderRequest.customer &&
-      isFinalClientOrderStatus(orderRequest.status || 'pending')
+      isClientOrderVisibleInHistory(orderRequest.status || 'pending')
     )
     .slice(0, 5);
 
@@ -4322,12 +4338,12 @@ async function openLastBookingsModal() {
       bookingRequest &&
       bookingRequest.booking &&
       bookingRequest.customer &&
-      isFinalClientBookingStatus(bookingRequest.status || 'pending')
+      isClientBookingVisibleInHistory(bookingRequest.status || 'pending')
     );
 
   const lastBooking = getLastBookingRequest();
 
-  if (!LIVE_REQUESTS_ENABLED && lastBooking && isFinalClientBookingStatus(lastBooking.status || 'pending')) {
+  if (!LIVE_REQUESTS_ENABLED && lastBooking && isClientBookingVisibleInHistory(lastBooking.status || 'pending')) {
     bookings = [
       lastBooking,
       ...bookings.filter((bookingRequest) => String(bookingRequest?.requestId) !== String(lastBooking.requestId))
@@ -4450,7 +4466,7 @@ function renderClientOrderAccessButtons() {
 
   const tHistory = getClientHistoryTexts();
   const status = lastOrderRequest.status || 'pending';
-  const hasCurrentOrder = !isFinalClientOrderStatus(status);
+  const hasCurrentOrder = isActiveClientOrderStatus(status);
 
   return `
     <div class="mt-4 flex flex-wrap gap-2">
@@ -4476,7 +4492,7 @@ function renderClientBookingAccessButtons() {
 
   const tHistory = getClientHistoryTexts();
   const status = lastBookingRequest.status || 'pending';
-  const hasCurrentBooking = !isFinalClientBookingStatus(status);
+  const hasCurrentBooking = isActiveClientBookingStatus(status);
 
   return `
     <div class="mt-4 flex flex-wrap gap-2">
@@ -4675,7 +4691,7 @@ function renderLastOrderRequestCard() {
 
   const status = orderRequest.status || 'pending';
 
-  if (isFinalClientOrderStatus(status)) {
+  if (!isActiveClientOrderStatus(status)) {
     return '';
   }
 
@@ -4945,29 +4961,14 @@ function hasPendingClientBookingRequest() {
   const bookingRequest = getLastBookingRequest();
   if (!bookingRequest) return false;
 
-  return [
-    'pending',
-    'processing',
-    'modified',
-    'accepted_by_client',
-    'rejected_by_client',
-    'confirmed'
-  ].includes(bookingRequest.status || 'pending');
+  return isActiveClientBookingStatus(bookingRequest.status || 'pending');
 }
 
 function hasPendingClientOrderRequest() {
   const orderRequest = getLastOrderRequest();
   if (!orderRequest) return false;
 
-  return [
-    'pending',
-    'sent',
-    'processing',
-    'modified',
-    'accepted_by_client',
-    'rejected_by_client',
-    'confirmed'
-  ].includes(orderRequest.status || 'pending');
+  return isActiveClientOrderStatus(orderRequest.status || 'pending');
 }
 
 function renderClientRequestRefreshPanel() {
@@ -5040,7 +5041,7 @@ function shouldFocusClientOrderCardAfterRefresh(previousSnapshot, nextSnapshot) 
   if (!previousSnapshot || !nextSnapshot) return false;
   if (previousSnapshot.requestId !== nextSnapshot.requestId) return false;
   if (previousSnapshot.status === nextSnapshot.status) return false;
-  if (isFinalClientOrderStatus(nextSnapshot.status)) return false;
+  if (!isActiveClientOrderStatus(nextSnapshot.status)) return false;
 
   return true;
 }

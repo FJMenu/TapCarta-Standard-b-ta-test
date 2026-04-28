@@ -315,7 +315,9 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       top: 16px;
       right: 20px;
       display: flex;
-      gap: 8px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
       z-index: 50;
       background: rgba(26, 26, 26, 0.92);
       padding: 10px 12px;
@@ -323,6 +325,12 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
       border: 1px solid rgba(242, 199, 68, 0.30);
       max-width: calc(100vw - 24px);
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+    }
+
+    .lang-buttons-row {
+      display: flex;
+      gap: 8px;
       pointer-events: none;
     }
 
@@ -385,20 +393,16 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
     }
 
     .tapcarta-public-signature {
-      position: fixed;
-      top: 128px;
-      right: 28px;
-      z-index: 42;
-      width: min(210px, calc(100vw - 24px));
-      padding: 7px 8px 8px;
+      position: static;
+      width: min(190px, calc(100vw - 24px));
+      padding: 6px 7px 7px;
       border: 1px solid rgba(242, 199, 68, 0.12);
       border-radius: 10px;
-      background: rgba(6, 6, 6, 0.48);
+      background: rgba(6, 6, 6, 0.32);
       box-shadow: none;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
       text-align: center;
-      opacity: 0.9;
+      opacity: 0.88;
+      pointer-events: auto;
     }
 
     .tapcarta-public-logo {
@@ -737,14 +741,16 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
         top: 10px;
         right: 10px;
         left: 10px;
-        justify-content: center;
+        align-items: flex-end;
         padding: 8px 10px;
       }
 
+      .lang-buttons-row {
+        width: 100%;
+        justify-content: center;
+      }
+
       .tapcarta-public-signature {
-        top: 104px;
-        left: auto;
-        right: 14px;
         width: 168px;
         max-width: calc(100vw - 28px);
         padding: 6px 7px 7px;
@@ -825,33 +831,35 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
 
 <body class="font-body">
   <div class="language-selector">
-    <button class="lang-btn" data-lang="fr" title="Français" aria-label="Français">
-      <span class="lang-label">FR</span>
-      <span class="lang-flag">🇫🇷</span>
-    </button>
-    <button class="lang-btn" data-lang="es" title="Español" aria-label="Español">
-      <span class="lang-label">ES</span>
-      <span class="lang-flag">🇪🇸</span>
-    </button>
-    <button class="lang-btn" data-lang="en" title="English" aria-label="English">
- <span class="lang-label">EN</span>
-      <span class="lang-flag">🇬🇧</span>
-    </button>
-    <button class="lang-btn" data-lang="nl" title="Nederlands" aria-label="Nederlands">
-      <span class="lang-label">NL</span>
-      <span class="lang-flag">🇳🇱</span>
-    </button>
-  </div>
+    <div class="lang-buttons-row">
+      <button class="lang-btn" data-lang="fr" title="Français" aria-label="Français">
+        <span class="lang-label">FR</span>
+        <span class="lang-flag">🇫🇷</span>
+      </button>
+      <button class="lang-btn" data-lang="es" title="Español" aria-label="Español">
+        <span class="lang-label">ES</span>
+        <span class="lang-flag">🇪🇸</span>
+      </button>
+      <button class="lang-btn" data-lang="en" title="English" aria-label="English">
+        <span class="lang-label">EN</span>
+        <span class="lang-flag">🇬🇧</span>
+      </button>
+      <button class="lang-btn" data-lang="nl" title="Nederlands" aria-label="Nederlands">
+        <span class="lang-label">NL</span>
+        <span class="lang-flag">🇳🇱</span>
+      </button>
+    </div>
 
-  <div class="tapcarta-public-signature" aria-label="TapCarta menu digital">
-    <img
-      id="tapcarta-public-logo"
-      class="tapcarta-public-logo"
-      src=""
-      alt="TapCarta"
-      loading="eager"
-    >
-    <div id="tapcarta-public-text" class="tapcarta-public-text"></div>
+    <div class="tapcarta-public-signature" aria-label="TapCarta menu digital">
+      <img
+        id="tapcarta-public-logo"
+        class="tapcarta-public-logo"
+        src=""
+        alt="TapCarta"
+        loading="eager"
+      >
+      <div id="tapcarta-public-text" class="tapcarta-public-text"></div>
+    </div>
   </div>
 
   <div id="app-wrapper" class="w-full min-h-screen bg-dark text-cream">

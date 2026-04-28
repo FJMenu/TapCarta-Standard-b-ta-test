@@ -6,12 +6,28 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.13';
+    const APP_VERSION = 'V1.2.14';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
 let clientOrderSyncUnavailable = false;
 let clientBookingSyncUnavailable = false;
+
+function forceInitialScrollTop() {
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
+  window.scrollTo(0, 0);
+
+  window.addEventListener('pageshow', () => {
+    requestAnimationFrame(() => window.scrollTo(0, 0));
+    setTimeout(() => window.scrollTo(0, 0), 80);
+    setTimeout(() => window.scrollTo(0, 0), 250);
+  });
+}
+
+forceInitialScrollTop();
 
 function normalizeRequestItems(items) {
   if (!Array.isArray(items)) return [];

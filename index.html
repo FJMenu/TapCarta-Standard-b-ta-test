@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15';
+    const APP_VERSION = 'V1.2.15.2';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -2510,34 +2510,66 @@ async function updateStoredBookingRequest(updatedRequest) {
     }
 
     try {
-      let query = supabaseClient
-        .from('requests')
-        .update({
-          client_name: updatedRequest?.customer?.name || '',
-          client_phone: updatedRequest?.customer?.phone || '',
-          client_language: updatedRequest?.customer?.language || currentLang || 'fr',
-          booking_date: updatedRequest?.booking?.date || '',
-          booking_time: updatedRequest?.booking?.time || '',
-          party_size: Number(updatedRequest?.booking?.people || 1),
-          items: normalizeRequestItems(updatedRequest?.booking?.preorderItems || []),
-          note: updatedRequest?.booking?.note || '',
-          status: updatedRequest?.status || 'pending'
-        })
-        .eq('id', liveRequestId)
-        .eq('restaurant_id', updatedRequest?.restaurantId || LIVE_RESTAURANT_ID)
-        .eq('type', 'booking');
+      const restaurantResponse =
+        updatedRequest?.restaurantResponse && typeof updatedRequest.restaurantResponse === 'object'
+          ? {
+              ...updatedRequest.restaurantResponse,
+              message: updatedRequest.restaurantResponse.message || '',
+              updatedBy: updatedRequest.restaurantResponse.updatedBy || 'restaurant'
+            }
+          : null;
 
-      if (['accepted_by_client', 'rejected_by_client'].includes(updatedRequest?.status || '')) {
-        query = query.eq('status', 'modified');
+      const livePayload = {
+        client_name: updatedRequest?.customer?.name || '',
+        client_phone: updatedRequest?.customer?.phone || '',
+        client_language: updatedRequest?.customer?.language || currentLang || 'fr',
+        booking_date: updatedRequest?.booking?.date || '',
+        booking_time: updatedRequest?.booking?.time || '',
+        party_size: Number(updatedRequest?.booking?.people || 1),
+        items: normalizeRequestItems(updatedRequest?.booking?.preorderItems || []),
+        note: updatedRequest?.booking?.note || '',
+        status: updatedRequest?.status || 'pending',
+        updated_at: updatedRequest?.updatedAt || new Date().toISOString(),
+        restaurant_message: restaurantResponse?.message || null
+      };
+
+      if (restaurantResponse) {
+        livePayload.restaurant_response = restaurantResponse;
       }
 
-      if ((updatedRequest?.status || '') === 'cancelled') {
-        query = query.in('status', ['pending', 'processing', 'modified']);
+      async function runBookingUpdate(payload) {
+        let query = supabaseClient
+          .from('requests')
+          .update(payload)
+          .eq('id', liveRequestId)
+          .eq('restaurant_id', updatedRequest?.restaurantId || LIVE_RESTAURANT_ID)
+          .eq('type', 'booking');
+
+        if (['accepted_by_client', 'rejected_by_client'].includes(updatedRequest?.status || '')) {
+          query = query.eq('status', 'modified');
+        }
+
+        if ((updatedRequest?.status || '') === 'cancelled') {
+          query = query.in('status', ['pending', 'processing', 'modified']);
+        }
+
+        return await query.select('*').maybeSingle();
       }
 
-      const { data, error } = await query
-        .select('*')
-        .maybeSingle();
+      let { data, error } = await runBookingUpdate(livePayload);
+
+      if (error && livePayload.restaurant_response) {
+        const fallbackPayload = { ...livePayload };
+        delete fallbackPayload.restaurant_response;
+
+        const fallbackResult = await runBookingUpdate(fallbackPayload);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+
+        if (!error) {
+          console.warn('Supabase booking update: restaurant_response non accepté, fallback restaurant_message utilisé.');
+        }
+      }
 
       if (error) throw error;
 
@@ -2874,6 +2906,39 @@ function buildBookingRequestSummaryText(bookingRequest) {
         ? 'Voorgesteld uur'
         : 'Proposed time';
 
+  const currentTimeLabel = currentLang === 'fr'
+    ? 'Heure initiale'
+    : currentLang === 'es'
+      ? 'Hora inicial'
+      : currentLang === 'nl'
+        ? 'Oorspronkelijk uur'
+        : 'Initial time';
+
+  const modificationWarningTexts = {
+    fr: {
+      title: 'Le restaurant propose un nouvel horaire',
+      intro: 'Vérifiez bien ce changement avant d’accepter.',
+      accept: 'En cliquant sur “Accepter”, votre réservation sera validée pour ce nouvel horaire.'
+    },
+    es: {
+      title: 'El restaurante propone una nueva hora',
+      intro: 'Revise bien este cambio antes de aceptar.',
+      accept: 'Al hacer clic en “Aceptar”, su reserva quedará validada para esta nueva hora.'
+    },
+    en: {
+      title: 'The restaurant proposes a new time',
+      intro: 'Please check this change carefully before accepting.',
+      accept: 'By clicking “Accept”, your booking will be confirmed for this new time.'
+    },
+    nl: {
+      title: 'Het restaurant stelt een nieuw uur voor',
+      intro: 'Controleer deze wijziging goed voordat u aanvaardt.',
+      accept: 'Door op “Aanvaarden” te klikken, wordt uw reservatie bevestigd voor dit nieuwe uur.'
+    }
+  };
+
+  const modificationWarning = modificationWarningTexts[currentLang] || modificationWarningTexts.fr;
+
   const restaurantMessageLabel = currentLang === 'fr'
     ? 'Message du restaurant'
     : currentLang === 'es'
@@ -3004,19 +3069,40 @@ window.acceptLastBookingModification = async function() {
   const hadOpenBookingSummaryModal = Boolean(document.getElementById('booking-summary-modal'));
   const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
-  const proposedTime = bookingRequest?.restaurantResponse?.proposal?.proposedTime || '';
+
+  const existingRestaurantResponse =
+    bookingRequest?.restaurantResponse && typeof bookingRequest.restaurantResponse === 'object'
+      ? bookingRequest.restaurantResponse
+      : {};
+
+  const existingProposal =
+    existingRestaurantResponse?.proposal && typeof existingRestaurantResponse.proposal === 'object'
+      ? existingRestaurantResponse.proposal
+      : {};
+
+  const proposedTime = existingProposal.proposedTime || '';
+  const acceptedTime = proposedTime || bookingRequest?.booking?.time || '';
+
   const updatedRequest = {
     ...bookingRequest,
     booking: {
       ...(bookingRequest.booking || {}),
-      time: proposedTime || bookingRequest?.booking?.time || ''
+      time: acceptedTime
     },
     status: 'accepted_by_client',
     updatedAt: nowIso,
     clientDecision: 'accepted',
     clientDecisionAt: nowIso,
     restaurantResponse: {
-      ...(bookingRequest.restaurantResponse || {}),
+      ...existingRestaurantResponse,
+      message: existingRestaurantResponse.message || '',
+      updatedBy: existingRestaurantResponse.updatedBy || 'restaurant',
+      proposal: {
+        ...existingProposal,
+        proposedTime: acceptedTime,
+        acceptedTime,
+        acceptedAt: nowIso
+      },
       clientDecision: 'accepted',
       clientDecisionAt: nowIso
     }
@@ -3350,6 +3436,41 @@ function renderLastBookingRequestCard() {
           `}
         </div>
       </div>
+
+      ${status === 'modified' && proposedTime ? `
+        <div class="mt-4 rounded-2xl border border-sky-300/40 bg-sky-500/15 p-4 shadow-[0_18px_45px_rgba(56,189,248,0.12)]">
+          <div class="text-xs font-bold uppercase tracking-[0.16em] text-sky-100/85">
+            ${escapeBookingHtml(modificationWarning.title)}
+          </div>
+          <div class="mt-2 text-sm text-cream/85">
+            ${escapeBookingHtml(modificationWarning.intro)}
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">
+                ${escapeBookingHtml(currentTimeLabel)}
+              </div>
+              <div class="text-lg font-semibold text-cream/80 line-through decoration-red-300/70">
+                ${escapeBookingHtml(bookingRequest.booking.time || '-')}
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-emerald-300/35 bg-emerald-500/15 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-emerald-100/75 mb-1">
+                ${escapeBookingHtml(proposedTimeLabel)}
+              </div>
+              <div class="text-3xl font-black text-emerald-100 tracking-tight">
+                ${escapeBookingHtml(proposedTime)}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-xl border border-emerald-300/20 bg-black/20 px-3 py-3 text-sm font-semibold text-emerald-100">
+            ${escapeBookingHtml(modificationWarning.accept)}
+          </div>
+        </div>
+      ` : ''}
 
       ${['pending', 'processing'].includes(status) ? renderClientRequestRefreshPanel() : ''}
 
@@ -3908,27 +4029,58 @@ async function updateStoredOrderRequest(updatedOrderRequest) {
     }
 
     try {
-      let query = supabaseClient
-        .from('requests')
-        .update({
-          status: updatedOrderRequest?.status || 'pending',
-          booking_date: updatedOrderRequest?.order?.date || null,
-          booking_time: updatedOrderRequest?.order?.time || null,
-          items: normalizeRequestItems(updatedOrderRequest?.order?.items || []),
-          note: updatedOrderRequest?.order?.note || '',
-          restaurant_message: updatedOrderRequest?.restaurantResponse?.message || ''
-        })
-        .eq('id', liveRequestId)
-        .eq('restaurant_id', updatedOrderRequest?.restaurantId || LIVE_RESTAURANT_ID)
-        .eq('type', 'order');
+      const restaurantResponse =
+        updatedOrderRequest?.restaurantResponse && typeof updatedOrderRequest.restaurantResponse === 'object'
+          ? {
+              ...updatedOrderRequest.restaurantResponse,
+              message: updatedOrderRequest.restaurantResponse.message || '',
+              updatedBy: updatedOrderRequest.restaurantResponse.updatedBy || 'restaurant'
+            }
+          : null;
 
-      if (['accepted_by_client', 'rejected_by_client'].includes(updatedOrderRequest?.status || '')) {
-        query = query.eq('status', 'modified');
+      const livePayload = {
+        status: updatedOrderRequest?.status || 'pending',
+        booking_date: updatedOrderRequest?.order?.date || null,
+        booking_time: updatedOrderRequest?.order?.time || null,
+        items: normalizeRequestItems(updatedOrderRequest?.order?.items || []),
+        note: updatedOrderRequest?.order?.note || '',
+        updated_at: updatedOrderRequest?.updatedAt || new Date().toISOString(),
+        restaurant_message: restaurantResponse?.message || null
+      };
+
+      if (restaurantResponse) {
+        livePayload.restaurant_response = restaurantResponse;
       }
 
-      const { data, error } = await query
-        .select('*')
-        .maybeSingle();
+      async function runOrderUpdate(payload) {
+        let query = supabaseClient
+          .from('requests')
+          .update(payload)
+          .eq('id', liveRequestId)
+          .eq('restaurant_id', updatedOrderRequest?.restaurantId || LIVE_RESTAURANT_ID)
+          .eq('type', 'order');
+
+        if (['accepted_by_client', 'rejected_by_client'].includes(updatedOrderRequest?.status || '')) {
+          query = query.eq('status', 'modified');
+        }
+
+        return await query.select('*').maybeSingle();
+      }
+
+      let { data, error } = await runOrderUpdate(livePayload);
+
+      if (error && livePayload.restaurant_response) {
+        const fallbackPayload = { ...livePayload };
+        delete fallbackPayload.restaurant_response;
+
+        const fallbackResult = await runOrderUpdate(fallbackPayload);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+
+        if (!error) {
+          console.warn('Supabase order update: restaurant_response non accepté, fallback restaurant_message utilisé.');
+        }
+      }
 
       if (error) throw error;
 
@@ -4054,19 +4206,40 @@ window.acceptLastOrderModification = async function() {
 
   const hadOpenHistoryModal = Boolean(document.getElementById('client-history-modal'));
   const nowIso = new Date().toISOString();
-  const proposedTime = orderRequest?.restaurantResponse?.proposal?.proposedTime || '';
+
+  const existingRestaurantResponse =
+    orderRequest?.restaurantResponse && typeof orderRequest.restaurantResponse === 'object'
+      ? orderRequest.restaurantResponse
+      : {};
+
+  const existingProposal =
+    existingRestaurantResponse?.proposal && typeof existingRestaurantResponse.proposal === 'object'
+      ? existingRestaurantResponse.proposal
+      : {};
+
+  const proposedTime = existingProposal.proposedTime || '';
+  const acceptedTime = proposedTime || orderRequest?.order?.time || '';
+
   const updatedOrderRequest = {
     ...orderRequest,
     order: {
       ...(orderRequest.order || {}),
-      time: proposedTime || orderRequest?.order?.time || ''
+      time: acceptedTime
     },
     status: 'accepted_by_client',
     updatedAt: nowIso,
     clientDecisionAt: nowIso,
     clientDecision: 'accepted',
     restaurantResponse: {
-      ...(orderRequest.restaurantResponse || {}),
+      ...existingRestaurantResponse,
+      message: existingRestaurantResponse.message || '',
+      updatedBy: existingRestaurantResponse.updatedBy || 'restaurant',
+      proposal: {
+        ...existingProposal,
+        proposedTime: acceptedTime,
+        acceptedTime,
+        acceptedAt: nowIso
+      },
       clientDecision: 'accepted',
       clientDecisionAt: nowIso
     }
@@ -4850,6 +5023,39 @@ function renderLastOrderRequestCard() {
   const totalAmount = Number(orderRequest.order.totalAmount || 0);
   const isFinalStatus = isFinalClientOrderStatus(status);
 
+  const currentTimeLabel = currentLang === 'fr'
+    ? 'Heure initiale'
+    : currentLang === 'es'
+      ? 'Hora inicial'
+      : currentLang === 'nl'
+        ? 'Oorspronkelijk uur'
+        : 'Initial time';
+
+  const modificationWarningTexts = {
+    fr: {
+      title: 'Le restaurant propose un nouvel horaire',
+      intro: 'Vérifiez bien ce changement avant d’accepter.',
+      accept: 'En cliquant sur “Accepter”, votre commande sera validée pour ce nouvel horaire.'
+    },
+    es: {
+      title: 'El restaurante propone una nueva hora',
+      intro: 'Revise bien este cambio antes de aceptar.',
+      accept: 'Al hacer clic en “Aceptar”, su pedido quedará validado para esta nueva hora.'
+    },
+    en: {
+      title: 'The restaurant proposes a new time',
+      intro: 'Please check this change carefully before accepting.',
+      accept: 'By clicking “Accept”, your order will be confirmed for this new time.'
+    },
+    nl: {
+      title: 'Het restaurant stelt een nieuw uur voor',
+      intro: 'Controleer deze wijziging goed voordat u aanvaardt.',
+      accept: 'Door op “Aanvaarden” te klikken, wordt uw bestelling bevestigd voor dit nieuwe uur.'
+    }
+  };
+
+  const modificationWarning = modificationWarningTexts[currentLang] || modificationWarningTexts.fr;
+
   const responseMessageByStatus = {
     pending: texts.waiting,
     sent: texts.waiting,
@@ -4920,6 +5126,41 @@ function renderLastOrderRequestCard() {
           ` : ''}
         </div>
       </div>
+
+      ${status === 'modified' && proposedTime ? `
+        <div class="mt-4 rounded-2xl border border-sky-300/40 bg-sky-500/15 p-4 shadow-[0_18px_45px_rgba(56,189,248,0.12)]">
+          <div class="text-xs font-bold uppercase tracking-[0.16em] text-sky-100/85">
+            ${escapeBookingHtml(modificationWarning.title)}
+          </div>
+          <div class="mt-2 text-sm text-cream/85">
+            ${escapeBookingHtml(modificationWarning.intro)}
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-cream/45 mb-1">
+                ${escapeBookingHtml(currentTimeLabel)}
+              </div>
+              <div class="text-lg font-semibold text-cream/80 line-through decoration-red-300/70">
+                ${escapeBookingHtml(orderRequest.order.time || '-')}
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-emerald-300/35 bg-emerald-500/15 px-4 py-3">
+              <div class="text-[11px] uppercase tracking-wide text-emerald-100/75 mb-1">
+                ${escapeBookingHtml(texts.proposedTime)}
+              </div>
+              <div class="text-3xl font-black text-emerald-100 tracking-tight">
+                ${escapeBookingHtml(proposedTime)}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-xl border border-emerald-300/20 bg-black/20 px-3 py-3 text-sm font-semibold text-emerald-100">
+            ${escapeBookingHtml(modificationWarning.accept)}
+          </div>
+        </div>
+      ` : ''}
 
       ${!isFinalStatus ? renderClientRequestRefreshPanel() : ''}
 

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.4';
+    const APP_VERSION = 'V1.2.15.5';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -152,6 +152,7 @@ function mapLiveBookingRowToRequest(row) {
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || null,
     status: row.status || 'pending',
+    confirmedAt: (row.status === 'confirmed' ? (row.confirmed_at || row.updated_at || null) : null),
     customer: {
       name: row.client_name || '',
       phone: row.client_phone || '',
@@ -205,6 +206,7 @@ function mapLiveOrderRowToRequest(row) {
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || null,
     status: row.status || 'pending',
+    confirmedAt: (row.status === 'confirmed' ? (row.confirmed_at || row.updated_at || null) : null),
     customer: {
       name: row.client_name || '',
       phone: row.client_phone || '',
@@ -2552,6 +2554,22 @@ async function syncLastBookingRequestFromSource() {
 
     localStorage.setItem(getLastBookingStorageKey(), JSON.stringify(mergedLastBooking));
 
+    const existingBookings = (() => {
+      try {
+        const rawBookings = localStorage.getItem(getBookingStorageKey());
+        const parsedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+        return Array.isArray(parsedBookings) ? parsedBookings : [];
+      } catch (error) {
+        return [];
+      }
+    })();
+
+    const withoutDuplicate = existingBookings.filter(
+      (entry) => String(entry?.requestId) !== String(mergedLastBooking.requestId)
+    );
+
+    writeBookingRequestsToStorage([mergedLastBooking, ...withoutDuplicate].slice(0, 20));
+
     clientBookingSyncUnavailable = false;
     return mergedLastBooking;
   } catch (error) {
@@ -4539,6 +4557,798 @@ function getClientHistoryTexts() {
   return texts[currentLang] || texts.fr;
 }
 
+function getClientConfirmationPopupTexts(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'Votre commande est confirmée' : 'Votre réservation est confirmée',
+      main: isOrder
+        ? 'Votre commande du {date} à {time} est bien confirmée par le restaurant.'
+        : 'Votre réservation du {date} à {time} est bien confirmée par le restaurant.',
+      received: 'Confirmation reçue le {receivedAt}.',
+      help: isOrder
+        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes commandes.'
+        : 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes réservations.',
+      read: 'Lu'
+    },
+    es: {
+      title: isOrder ? 'Su pedido está confirmado' : 'Su reserva está confirmada',
+      main: isOrder
+        ? 'Su pedido del {date} a las {time} ha sido confirmado por el restaurante.'
+        : 'Su reserva del {date} a las {time} ha sido confirmada por el restaurante.',
+      received: 'Confirmación recibida el {receivedAt}.',
+      help: isOrder
+        ? 'Después de pulsar “Leído”, podrá encontrarlo en Ver mis pedidos.'
+        : 'Después de pulsar “Leído”, podrá encontrarla en Ver mis reservas.',
+      read: 'Leído'
+    },
+    en: {
+      title: isOrder ? 'Your order is confirmed' : 'Your reservation is confirmed',
+      main: isOrder
+        ? 'Your order for {date} at {time} has been confirmed by the restaurant.'
+        : 'Your reservation for {date} at {time} has been confirmed by the restaurant.',
+      received: 'Confirmation received on {receivedAt}.',
+      help: isOrder
+        ? 'After tapping “Read”, you can find it in View my orders.'
+        : 'After tapping “Read”, you can find it in View my bookings.',
+      read: 'Read'
+    },
+    nl: {
+      title: isOrder ? 'Uw bestelling is bevestigd' : 'Uw reservatie is bevestigd',
+      main: isOrder
+        ? 'Uw bestelling voor {date} om {time} is bevestigd door het restaurant.'
+        : 'Uw reservatie voor {date} om {time} is bevestigd door het restaurant.',
+      received: 'Bevestiging ontvangen op {receivedAt}.',
+      help: isOrder
+        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn bestellingen bekijken.'
+        : 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn reservaties bekijken.',
+      read: 'Gelezen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function getClientConfirmationReadStorageKey(type, requestId) {
+  return `tapcarta_client_confirmation_read_${type}_${requestId}`;
+}
+
+function hasReadClientConfirmation(type, requestId) {
+  if (!type || !requestId) return true;
+  return localStorage.getItem(getClientConfirmationReadStorageKey(type, requestId)) === 'true';
+}
+
+function markClientConfirmationAsRead(type, requestId) {
+  if (!type || !requestId) return;
+  localStorage.setItem(getClientConfirmationReadStorageKey(type, requestId), 'true');
+}
+
+function getClientRequestConfirmationReceivedAt(request) {
+  return request?.confirmedAt || request?.updatedAt || request?.restaurantResponse?.proposal?.changedAt || request?.createdAt || new Date().toISOString();
+}
+
+function getUnreadConfirmedClientRequests() {
+  const candidates = [];
+
+  try {
+    const lastOrder = getLastOrderRequest();
+    if (lastOrder) candidates.push({ type: 'order', request: lastOrder });
+  } catch (error) {}
+
+  try {
+    const storedOrders = readOrderRequestsFromStorage();
+    if (Array.isArray(storedOrders)) {
+      storedOrders.forEach((request) => candidates.push({ type: 'order', request }));
+    }
+  } catch (error) {}
+
+  try {
+    const lastBooking = getLastBookingRequest();
+    if (lastBooking) candidates.push({ type: 'booking', request: lastBooking });
+  } catch (error) {}
+
+  try {
+    const rawBookings = localStorage.getItem(getBookingStorageKey());
+    const storedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+    if (Array.isArray(storedBookings)) {
+      storedBookings.forEach((request) => candidates.push({ type: 'booking', request }));
+    }
+  } catch (error) {}
+
+  const unique = new Map();
+
+  candidates.forEach(({ type, request }) => {
+    const requestId = request?.liveRequestId || request?.requestId || null;
+    if (!type || !request || !requestId) return;
+    if ((request.status || '') !== 'confirmed') return;
+    if (hasReadClientConfirmation(type, requestId)) return;
+
+    const key = `${type}_${requestId}`;
+    if (!unique.has(key)) {
+      unique.set(key, { type, request, requestId: String(requestId) });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) => {
+    const dateA = new Date(getClientRequestConfirmationReceivedAt(a.request)).getTime() || 0;
+    const dateB = new Date(getClientRequestConfirmationReceivedAt(b.request)).getTime() || 0;
+    return dateB - dateA;
+  });
+}
+
+function removeClientConfirmationPopup() {
+  const existingPopup = document.getElementById('client-confirmation-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+}
+
+function openClientConfirmationPopup(type, request) {
+  if (!type || !request) return;
+
+  const requestId = request.liveRequestId || request.requestId || null;
+  if (!requestId || hasReadClientConfirmation(type, requestId)) return;
+
+  removeClientConfirmationPopup();
+
+  const isOrder = type === 'order';
+  const texts = getClientConfirmationPopupTexts(type);
+  const dateValue = isOrder ? request?.order?.date : request?.booking?.date;
+  const timeValue = isOrder ? request?.order?.time : request?.booking?.time;
+  const receivedAt = getClientRequestConfirmationReceivedAt(request);
+
+  const mainText = texts.main
+    .replace('{date}', formatBookingDateForDisplay(dateValue || ''))
+    .replace('{time}', timeValue || '-');
+  const receivedText = texts.received.replace('{receivedAt}', formatBookingDateTimeForDisplay(receivedAt));
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-confirmation-popup" class="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div class="w-full max-w-md rounded-[28px] border border-emerald-300/35 bg-[#0D0D0D] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
+        <div class="flex items-start gap-3">
+          <div class="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500/15">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-200"></i>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-bold text-emerald-100">${escapeBookingHtml(texts.title)}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-cream/88">${escapeBookingHtml(mainText)}</p>
+            <p class="mt-3 text-sm font-semibold text-gold/90">${escapeBookingHtml(receivedText)}</p>
+            <p class="mt-3 text-sm leading-relaxed text-cream/72">${escapeBookingHtml(texts.help)}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onclick="closeClientConfirmationPopup('${escapeBookingHtml(type)}', '${escapeBookingHtml(String(requestId))}')"
+          class="btn-action mt-5 w-full px-4 py-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/15 text-sm font-bold text-emerald-100 hover:bg-emerald-500/25 transition-all"
+        >
+          ${escapeBookingHtml(texts.read)}
+        </button>
+      </div>
+    </div>
+  `);
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+window.closeClientConfirmationPopup = function(type, requestId) {
+  markClientConfirmationAsRead(type, requestId);
+  removeClientConfirmationPopup();
+
+  const nextUnread = getUnreadConfirmedClientRequests()[0];
+  if (nextUnread) {
+    openClientConfirmationPopup(nextUnread.type, nextUnread.request);
+  }
+};
+
+function showPendingClientConfirmationPopup() {
+  if (document.getElementById('client-confirmation-popup')) return;
+
+  const unreadConfirmedRequest = getUnreadConfirmedClientRequests()[0];
+  if (!unreadConfirmedRequest) return;
+
+  openClientConfirmationPopup(unreadConfirmedRequest.type, unreadConfirmedRequest.request);
+}
+
+function getClientConfirmationPopupTexts(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'Votre commande est confirmée' : 'Votre réservation est confirmée',
+      main: isOrder
+        ? 'Votre commande du {date} à {time} est bien confirmée par le restaurant.'
+        : 'Votre réservation du {date} à {time} est bien confirmée par le restaurant.',
+      received: 'Confirmation reçue le {receivedAt}.',
+      help: isOrder
+        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes commandes.'
+        : 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes réservations.',
+      read: 'Lu'
+    },
+    es: {
+      title: isOrder ? 'Su pedido está confirmado' : 'Su reserva está confirmada',
+      main: isOrder
+        ? 'Su pedido del {date} a las {time} ha sido confirmado por el restaurante.'
+        : 'Su reserva del {date} a las {time} ha sido confirmada por el restaurante.',
+      received: 'Confirmación recibida el {receivedAt}.',
+      help: isOrder
+        ? 'Después de pulsar “Leído”, podrá encontrarlo en Ver mis pedidos.'
+        : 'Después de pulsar “Leído”, podrá encontrarla en Ver mis reservas.',
+      read: 'Leído'
+    },
+    en: {
+      title: isOrder ? 'Your order is confirmed' : 'Your reservation is confirmed',
+      main: isOrder
+        ? 'Your order for {date} at {time} has been confirmed by the restaurant.'
+        : 'Your reservation for {date} at {time} has been confirmed by the restaurant.',
+      received: 'Confirmation received on {receivedAt}.',
+      help: isOrder
+        ? 'After tapping “Read”, you can find it in View my orders.'
+        : 'After tapping “Read”, you can find it in View my bookings.',
+      read: 'Read'
+    },
+    nl: {
+      title: isOrder ? 'Uw bestelling is bevestigd' : 'Uw reservatie is bevestigd',
+      main: isOrder
+        ? 'Uw bestelling voor {date} om {time} is bevestigd door het restaurant.'
+        : 'Uw reservatie voor {date} om {time} is bevestigd door het restaurant.',
+      received: 'Bevestiging ontvangen op {receivedAt}.',
+      help: isOrder
+        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn bestellingen bekijken.'
+        : 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn reservaties bekijken.',
+      read: 'Gelezen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function getClientConfirmationReadStorageKey(type, requestId) {
+  return `tapcarta_client_confirmation_read_${type}_${requestId}`;
+}
+
+function hasReadClientConfirmation(type, requestId) {
+  if (!type || !requestId) return true;
+  return localStorage.getItem(getClientConfirmationReadStorageKey(type, requestId)) === 'true';
+}
+
+function markClientConfirmationAsRead(type, requestId) {
+  if (!type || !requestId) return;
+  localStorage.setItem(getClientConfirmationReadStorageKey(type, requestId), 'true');
+}
+
+function getClientRequestConfirmationReceivedAt(request) {
+  return request?.confirmedAt || request?.updatedAt || request?.restaurantResponse?.proposal?.changedAt || request?.createdAt || new Date().toISOString();
+}
+
+function getUnreadConfirmedClientRequests() {
+  const candidates = [];
+
+  try {
+    const lastOrder = getLastOrderRequest();
+    if (lastOrder) candidates.push({ type: 'order', request: lastOrder });
+  } catch (error) {}
+
+  try {
+    const storedOrders = readOrderRequestsFromStorage();
+    if (Array.isArray(storedOrders)) {
+      storedOrders.forEach((request) => candidates.push({ type: 'order', request }));
+    }
+  } catch (error) {}
+
+  try {
+    const lastBooking = getLastBookingRequest();
+    if (lastBooking) candidates.push({ type: 'booking', request: lastBooking });
+  } catch (error) {}
+
+  try {
+    const rawBookings = localStorage.getItem(getBookingStorageKey());
+    const storedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+    if (Array.isArray(storedBookings)) {
+      storedBookings.forEach((request) => candidates.push({ type: 'booking', request }));
+    }
+  } catch (error) {}
+
+  const unique = new Map();
+
+  candidates.forEach(({ type, request }) => {
+    const requestId = request?.liveRequestId || request?.requestId || null;
+    if (!type || !request || !requestId) return;
+    if ((request.status || '') !== 'confirmed') return;
+    if (hasReadClientConfirmation(type, requestId)) return;
+
+    const key = `${type}_${requestId}`;
+    if (!unique.has(key)) {
+      unique.set(key, { type, request, requestId: String(requestId) });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) => {
+    const dateA = new Date(getClientRequestConfirmationReceivedAt(a.request)).getTime() || 0;
+    const dateB = new Date(getClientRequestConfirmationReceivedAt(b.request)).getTime() || 0;
+    return dateB - dateA;
+  });
+}
+
+function removeClientConfirmationPopup() {
+  const existingPopup = document.getElementById('client-confirmation-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+}
+
+function openClientConfirmationPopup(type, request) {
+  if (!type || !request) return;
+
+  const requestId = request.liveRequestId || request.requestId || null;
+  if (!requestId || hasReadClientConfirmation(type, requestId)) return;
+
+  removeClientConfirmationPopup();
+
+  const isOrder = type === 'order';
+  const texts = getClientConfirmationPopupTexts(type);
+  const dateValue = isOrder ? request?.order?.date : request?.booking?.date;
+  const timeValue = isOrder ? request?.order?.time : request?.booking?.time;
+  const receivedAt = getClientRequestConfirmationReceivedAt(request);
+
+  const mainText = texts.main
+    .replace('{date}', formatBookingDateForDisplay(dateValue || ''))
+    .replace('{time}', timeValue || '-');
+  const receivedText = texts.received.replace('{receivedAt}', formatBookingDateTimeForDisplay(receivedAt));
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-confirmation-popup" class="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div class="w-full max-w-md rounded-[28px] border border-emerald-300/35 bg-[#0D0D0D] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
+        <div class="flex items-start gap-3">
+          <div class="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500/15">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-200"></i>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-bold text-emerald-100">${escapeBookingHtml(texts.title)}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-cream/88">${escapeBookingHtml(mainText)}</p>
+            <p class="mt-3 text-sm font-semibold text-gold/90">${escapeBookingHtml(receivedText)}</p>
+            <p class="mt-3 text-sm leading-relaxed text-cream/72">${escapeBookingHtml(texts.help)}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onclick="closeClientConfirmationPopup('${escapeBookingHtml(type)}', '${escapeBookingHtml(String(requestId))}')"
+          class="btn-action mt-5 w-full px-4 py-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/15 text-sm font-bold text-emerald-100 hover:bg-emerald-500/25 transition-all"
+        >
+          ${escapeBookingHtml(texts.read)}
+        </button>
+      </div>
+    </div>
+  `);
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+window.closeClientConfirmationPopup = function(type, requestId) {
+  markClientConfirmationAsRead(type, requestId);
+  removeClientConfirmationPopup();
+
+  const nextUnread = getUnreadConfirmedClientRequests()[0];
+  if (nextUnread) {
+    openClientConfirmationPopup(nextUnread.type, nextUnread.request);
+  }
+};
+
+function showPendingClientConfirmationPopup() {
+  if (document.getElementById('client-confirmation-popup')) return;
+
+  const unreadConfirmedRequest = getUnreadConfirmedClientRequests()[0];
+  if (!unreadConfirmedRequest) return;
+
+  openClientConfirmationPopup(unreadConfirmedRequest.type, unreadConfirmedRequest.request);
+}
+
+function getClientConfirmationPopupTexts(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'Votre commande est confirmée' : 'Votre réservation est confirmée',
+      main: isOrder
+        ? 'Votre commande du {date} à {time} est bien confirmée par le restaurant.'
+        : 'Votre réservation du {date} à {time} est bien confirmée par le restaurant.',
+      received: 'Confirmation reçue le {receivedAt}.',
+      help: isOrder
+        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes commandes.'
+        : 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes réservations.',
+      read: 'Lu'
+    },
+    es: {
+      title: isOrder ? 'Su pedido está confirmado' : 'Su reserva está confirmada',
+      main: isOrder
+        ? 'Su pedido del {date} a las {time} ha sido confirmado por el restaurante.'
+        : 'Su reserva del {date} a las {time} ha sido confirmada por el restaurante.',
+      received: 'Confirmación recibida el {receivedAt}.',
+      help: isOrder
+        ? 'Después de pulsar “Leído”, podrá encontrarlo en Ver mis pedidos.'
+        : 'Después de pulsar “Leído”, podrá encontrarla en Ver mis reservas.',
+      read: 'Leído'
+    },
+    en: {
+      title: isOrder ? 'Your order is confirmed' : 'Your reservation is confirmed',
+      main: isOrder
+        ? 'Your order for {date} at {time} has been confirmed by the restaurant.'
+        : 'Your reservation for {date} at {time} has been confirmed by the restaurant.',
+      received: 'Confirmation received on {receivedAt}.',
+      help: isOrder
+        ? 'After tapping “Read”, you can find it in View my orders.'
+        : 'After tapping “Read”, you can find it in View my bookings.',
+      read: 'Read'
+    },
+    nl: {
+      title: isOrder ? 'Uw bestelling is bevestigd' : 'Uw reservatie is bevestigd',
+      main: isOrder
+        ? 'Uw bestelling voor {date} om {time} is bevestigd door het restaurant.'
+        : 'Uw reservatie voor {date} om {time} is bevestigd door het restaurant.',
+      received: 'Bevestiging ontvangen op {receivedAt}.',
+      help: isOrder
+        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn bestellingen bekijken.'
+        : 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn reservaties bekijken.',
+      read: 'Gelezen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function getClientConfirmationReadStorageKey(type, requestId) {
+  return `tapcarta_client_confirmation_read_${type}_${requestId}`;
+}
+
+function hasReadClientConfirmation(type, requestId) {
+  if (!type || !requestId) return true;
+  return localStorage.getItem(getClientConfirmationReadStorageKey(type, requestId)) === 'true';
+}
+
+function markClientConfirmationAsRead(type, requestId) {
+  if (!type || !requestId) return;
+  localStorage.setItem(getClientConfirmationReadStorageKey(type, requestId), 'true');
+}
+
+function getClientRequestConfirmationReceivedAt(request) {
+  return request?.confirmedAt || request?.updatedAt || request?.restaurantResponse?.proposal?.changedAt || request?.createdAt || new Date().toISOString();
+}
+
+function getUnreadConfirmedClientRequests() {
+  const candidates = [];
+
+  try {
+    const lastOrder = getLastOrderRequest();
+    if (lastOrder) candidates.push({ type: 'order', request: lastOrder });
+  } catch (error) {}
+
+  try {
+    const storedOrders = readOrderRequestsFromStorage();
+    if (Array.isArray(storedOrders)) {
+      storedOrders.forEach((request) => candidates.push({ type: 'order', request }));
+    }
+  } catch (error) {}
+
+  try {
+    const lastBooking = getLastBookingRequest();
+    if (lastBooking) candidates.push({ type: 'booking', request: lastBooking });
+  } catch (error) {}
+
+  try {
+    const rawBookings = localStorage.getItem(getBookingStorageKey());
+    const storedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+    if (Array.isArray(storedBookings)) {
+      storedBookings.forEach((request) => candidates.push({ type: 'booking', request }));
+    }
+  } catch (error) {}
+
+  const unique = new Map();
+
+  candidates.forEach(({ type, request }) => {
+    const requestId = request?.liveRequestId || request?.requestId || null;
+    if (!type || !request || !requestId) return;
+    if ((request.status || '') !== 'confirmed') return;
+    if (hasReadClientConfirmation(type, requestId)) return;
+
+    const key = `${type}_${requestId}`;
+    if (!unique.has(key)) {
+      unique.set(key, { type, request, requestId: String(requestId) });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) => {
+    const dateA = new Date(getClientRequestConfirmationReceivedAt(a.request)).getTime() || 0;
+    const dateB = new Date(getClientRequestConfirmationReceivedAt(b.request)).getTime() || 0;
+    return dateB - dateA;
+  });
+}
+
+function removeClientConfirmationPopup() {
+  const existingPopup = document.getElementById('client-confirmation-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+}
+
+function openClientConfirmationPopup(type, request) {
+  if (!type || !request) return;
+
+  const requestId = request.liveRequestId || request.requestId || null;
+  if (!requestId || hasReadClientConfirmation(type, requestId)) return;
+
+  removeClientConfirmationPopup();
+
+  const isOrder = type === 'order';
+  const texts = getClientConfirmationPopupTexts(type);
+  const dateValue = isOrder ? request?.order?.date : request?.booking?.date;
+  const timeValue = isOrder ? request?.order?.time : request?.booking?.time;
+  const receivedAt = getClientRequestConfirmationReceivedAt(request);
+
+  const mainText = texts.main
+    .replace('{date}', formatBookingDateForDisplay(dateValue || ''))
+    .replace('{time}', timeValue || '-');
+  const receivedText = texts.received.replace('{receivedAt}', formatBookingDateTimeForDisplay(receivedAt));
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-confirmation-popup" class="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div class="w-full max-w-md rounded-[28px] border border-emerald-300/35 bg-[#0D0D0D] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
+        <div class="flex items-start gap-3">
+          <div class="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500/15">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-200"></i>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-bold text-emerald-100">${escapeBookingHtml(texts.title)}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-cream/88">${escapeBookingHtml(mainText)}</p>
+            <p class="mt-3 text-sm font-semibold text-gold/90">${escapeBookingHtml(receivedText)}</p>
+            <p class="mt-3 text-sm leading-relaxed text-cream/72">${escapeBookingHtml(texts.help)}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onclick="closeClientConfirmationPopup('${escapeBookingHtml(type)}', '${escapeBookingHtml(String(requestId))}')"
+          class="btn-action mt-5 w-full px-4 py-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/15 text-sm font-bold text-emerald-100 hover:bg-emerald-500/25 transition-all"
+        >
+          ${escapeBookingHtml(texts.read)}
+        </button>
+      </div>
+    </div>
+  `);
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+window.closeClientConfirmationPopup = function(type, requestId) {
+  markClientConfirmationAsRead(type, requestId);
+  removeClientConfirmationPopup();
+
+  const nextUnread = getUnreadConfirmedClientRequests()[0];
+  if (nextUnread) {
+    openClientConfirmationPopup(nextUnread.type, nextUnread.request);
+  }
+};
+
+function showPendingClientConfirmationPopup() {
+  if (document.getElementById('client-confirmation-popup')) return;
+
+  const unreadConfirmedRequest = getUnreadConfirmedClientRequests()[0];
+  if (!unreadConfirmedRequest) return;
+
+  openClientConfirmationPopup(unreadConfirmedRequest.type, unreadConfirmedRequest.request);
+}
+
+function getClientConfirmationPopupTexts(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'Votre commande est confirmée' : 'Votre réservation est confirmée',
+      main: isOrder
+        ? 'Votre commande du {date} à {time} est bien confirmée par le restaurant.'
+        : 'Votre réservation du {date} à {time} est bien confirmée par le restaurant.',
+      received: 'Confirmation reçue le {receivedAt}.',
+      help: isOrder
+        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes commandes.'
+        : 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes réservations.',
+      read: 'Lu'
+    },
+    es: {
+      title: isOrder ? 'Su pedido está confirmado' : 'Su reserva está confirmada',
+      main: isOrder
+        ? 'Su pedido del {date} a las {time} ha sido confirmado por el restaurante.'
+        : 'Su reserva del {date} a las {time} ha sido confirmada por el restaurante.',
+      received: 'Confirmación recibida el {receivedAt}.',
+      help: isOrder
+        ? 'Después de pulsar “Leído”, podrá encontrarlo en Ver mis pedidos.'
+        : 'Después de pulsar “Leído”, podrá encontrarla en Ver mis reservas.',
+      read: 'Leído'
+    },
+    en: {
+      title: isOrder ? 'Your order is confirmed' : 'Your reservation is confirmed',
+      main: isOrder
+        ? 'Your order for {date} at {time} has been confirmed by the restaurant.'
+        : 'Your reservation for {date} at {time} has been confirmed by the restaurant.',
+      received: 'Confirmation received on {receivedAt}.',
+      help: isOrder
+        ? 'After tapping “Read”, you can find it in View my orders.'
+        : 'After tapping “Read”, you can find it in View my reservations.',
+      read: 'Read'
+    },
+    nl: {
+      title: isOrder ? 'Uw bestelling is bevestigd' : 'Uw reservatie is bevestigd',
+      main: isOrder
+        ? 'Uw bestelling voor {date} om {time} is bevestigd door het restaurant.'
+        : 'Uw reservatie voor {date} om {time} is bevestigd door het restaurant.',
+      received: 'Bevestiging ontvangen op {receivedAt}.',
+      help: isOrder
+        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn bestellingen bekijken.'
+        : 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn reservaties bekijken.',
+      read: 'Gelezen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function getClientConfirmationReadStorageKey(type, requestId) {
+  return `tapcarta_client_confirmation_read_${type}_${requestId}`;
+}
+
+function hasReadClientConfirmation(type, requestId) {
+  if (!type || !requestId) return true;
+  return localStorage.getItem(getClientConfirmationReadStorageKey(type, requestId)) === 'true';
+}
+
+function markClientConfirmationAsRead(type, requestId) {
+  if (!type || !requestId) return;
+  localStorage.setItem(getClientConfirmationReadStorageKey(type, requestId), 'true');
+}
+
+function getClientRequestConfirmationReceivedAt(request) {
+  return request?.confirmedAt || request?.updatedAt || request?.restaurantResponse?.proposal?.changedAt || request?.createdAt || new Date().toISOString();
+}
+
+function getUnreadConfirmedClientRequests() {
+  const candidates = [];
+
+  try {
+    const lastOrder = getLastOrderRequest();
+    if (lastOrder) candidates.push({ type: 'order', request: lastOrder });
+  } catch (error) {}
+
+  try {
+    const storedOrders = readOrderRequestsFromStorage();
+    if (Array.isArray(storedOrders)) {
+      storedOrders.forEach((request) => candidates.push({ type: 'order', request }));
+    }
+  } catch (error) {}
+
+  try {
+    const lastBooking = getLastBookingRequest();
+    if (lastBooking) candidates.push({ type: 'booking', request: lastBooking });
+  } catch (error) {}
+
+  try {
+    const rawBookings = localStorage.getItem(getBookingStorageKey());
+    const storedBookings = rawBookings ? JSON.parse(rawBookings) : [];
+    if (Array.isArray(storedBookings)) {
+      storedBookings.forEach((request) => candidates.push({ type: 'booking', request }));
+    }
+  } catch (error) {}
+
+  const unique = new Map();
+
+  candidates.forEach(({ type, request }) => {
+    const requestId = request?.liveRequestId || request?.requestId || null;
+    if (!type || !request || !requestId) return;
+    if ((request.status || '') !== 'confirmed') return;
+    if (hasReadClientConfirmation(type, requestId)) return;
+
+    const key = `${type}_${requestId}`;
+    if (!unique.has(key)) {
+      unique.set(key, { type, request, requestId: String(requestId) });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) => {
+    const dateA = new Date(getClientRequestConfirmationReceivedAt(a.request)).getTime() || 0;
+    const dateB = new Date(getClientRequestConfirmationReceivedAt(b.request)).getTime() || 0;
+    return dateB - dateA;
+  });
+}
+
+function removeClientConfirmationPopup() {
+  const existingPopup = document.getElementById('client-confirmation-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+}
+
+function openClientConfirmationPopup(type, request) {
+  if (!type || !request) return;
+
+  const requestId = request.liveRequestId || request.requestId || null;
+  if (!requestId || hasReadClientConfirmation(type, requestId)) return;
+
+  removeClientConfirmationPopup();
+
+  const isOrder = type === 'order';
+  const texts = getClientConfirmationPopupTexts(type);
+  const dateValue = isOrder ? request?.order?.date : request?.booking?.date;
+  const timeValue = isOrder ? request?.order?.time : request?.booking?.time;
+  const receivedAt = getClientRequestConfirmationReceivedAt(request);
+
+  const mainText = texts.main
+    .replace('{date}', formatBookingDateForDisplay(dateValue || ''))
+    .replace('{time}', timeValue || '-');
+  const receivedText = texts.received.replace('{receivedAt}', formatBookingDateTimeForDisplay(receivedAt));
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-confirmation-popup" class="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div class="w-full max-w-md rounded-[28px] border border-emerald-300/35 bg-[#0D0D0D] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
+        <div class="flex items-start gap-3">
+          <div class="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500/15">
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-200"></i>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-bold text-emerald-100">${escapeBookingHtml(texts.title)}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-cream/88">${escapeBookingHtml(mainText)}</p>
+            <p class="mt-3 text-sm font-semibold text-gold/90">${escapeBookingHtml(receivedText)}</p>
+            <p class="mt-3 text-sm leading-relaxed text-cream/72">${escapeBookingHtml(texts.help)}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onclick="closeClientConfirmationPopup('${escapeBookingHtml(type)}', '${escapeBookingHtml(String(requestId))}')"
+          class="btn-action mt-5 w-full px-4 py-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/15 text-sm font-bold text-emerald-100 hover:bg-emerald-500/25 transition-all"
+        >
+          ${escapeBookingHtml(texts.read)}
+        </button>
+      </div>
+    </div>
+  `);
+
+  if (window.lucide) {
+    requestAnimationFrame(() => {
+      lucide.createIcons();
+    });
+  }
+}
+
+window.closeClientConfirmationPopup = function(type, requestId) {
+  markClientConfirmationAsRead(type, requestId);
+  removeClientConfirmationPopup();
+
+  const nextUnread = getUnreadConfirmedClientRequests()[0];
+  if (nextUnread) {
+    openClientConfirmationPopup(nextUnread.type, nextUnread.request);
+  }
+};
+
+function showPendingClientConfirmationPopup() {
+  if (document.getElementById('client-confirmation-popup')) return;
+
+  const unreadConfirmedRequest = getUnreadConfirmedClientRequests()[0];
+  if (!unreadConfirmedRequest) return;
+
+  openClientConfirmationPopup(unreadConfirmedRequest.type, unreadConfirmedRequest.request);
+}
+
 function isFinalClientOrderStatus(status) {
   return ['served', 'not_served', 'refused', 'cancelled', 'cancelled_by_client', 'service_unknown_no_action'].includes(status || '');
 }
@@ -5511,6 +6321,8 @@ async function refreshClientRequestCards() {
       lucide.createIcons();
     });
   }
+
+  showPendingClientConfirmationPopup();
 }
 
 window.manualRefreshClientRequests = async function() {

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.12';
+    const APP_VERSION = 'V1.2.13';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -898,6 +898,47 @@ let siteConfig = {
   }
 };
 
+const defaultInfoBlocks = [
+  {
+    id: 'friesIncluded',
+    visible: true,
+    icon: 'info',
+    text: {
+      fr: 'Tous nos plats sont accompagnés de frites.',
+      es: 'Todos nuestros platos se sirven con patatas fritas.',
+      en: 'All our dishes are served with fries.',
+      nl: 'Al onze gerechten worden geserveerd met frieten.'
+    }
+  },
+  {
+    id: 'takeawayAvailable',
+    visible: false,
+    icon: 'shopping-bag',
+    text: {
+      fr: 'Tous nos plats sont disponibles à emporter.',
+      es: 'Todos nuestros platos están disponibles para llevar.',
+      en: 'All our dishes are available for takeaway.',
+      nl: 'Al onze gerechten zijn beschikbaar om mee te nemen.'
+    }
+  },
+  {
+    id: 'beefFatFries',
+    visible: false,
+    icon: 'flame',
+    text: {
+      fr: 'Nos frites sont cuites dans de la graisse de bœuf selon la tradition belge.',
+      es: 'Nuestras patatas fritas se cocinan en grasa de vacuno siguiendo la tradición belga.',
+      en: 'Our fries are cooked in beef fat according to Belgian tradition.',
+      nl: 'Onze frieten worden volgens Belgische traditie in rundervet gebakken.'
+    }
+  }
+];
+
+let infoBlocks = defaultInfoBlocks.map(block => ({
+  ...block,
+  text: { ...block.text }
+}));
+
 let menuData = {
   snacks: [],
   entrees: [],
@@ -983,6 +1024,76 @@ function getMenuItemSubtitle(item) {
     item?.subtitle ||
     ''
   );
+}
+
+function cloneDefaultInfoBlocks() {
+  return defaultInfoBlocks.map(block => ({
+    ...block,
+    text: { ...block.text }
+  }));
+}
+
+function normalizeInfoBlocks(sourceBlocks) {
+  if (!Array.isArray(sourceBlocks)) {
+    return cloneDefaultInfoBlocks();
+  }
+
+  const fallbackById = new Map(defaultInfoBlocks.map(block => [block.id, block]));
+
+  const normalizedBlocks = sourceBlocks
+    .filter(block => block && typeof block === 'object')
+    .map((block, index) => {
+      const fallback = fallbackById.get(block.id) || defaultInfoBlocks[index] || {};
+      const sourceText = block.text && typeof block.text === 'object' ? block.text : {};
+      const fallbackText = fallback.text && typeof fallback.text === 'object' ? fallback.text : {};
+
+      return {
+        id: block.id || fallback.id || `infoBlock${index + 1}`,
+        visible: block.visible === true,
+        icon: block.icon || fallback.icon || 'info',
+        text: {
+          ...fallbackText,
+          ...sourceText
+        }
+      };
+    });
+
+  return normalizedBlocks.length ? normalizedBlocks : cloneDefaultInfoBlocks();
+}
+
+function getInfoBlockText(block) {
+  const text = block?.text && typeof block.text === 'object' ? block.text : {};
+
+  return (
+    text[currentLang] ||
+    text.fr ||
+    text.es ||
+    text.en ||
+    text.nl ||
+    ''
+  );
+}
+
+function renderInfoBlocks() {
+  const visibleInfoBlocks = (Array.isArray(infoBlocks) ? infoBlocks : [])
+    .filter(block => block?.visible === true && getInfoBlockText(block).trim());
+
+  if (!visibleInfoBlocks.length) {
+    return '';
+  }
+
+  return `
+  <section class="px-6 py-6 animate-fade-up delay-2">
+    <div class="space-y-3">
+      ${visibleInfoBlocks.map(block => `
+      <div class="flex items-start gap-3 p-4 rounded-lg bg-darkCard border border-gold/20">
+        <i data-lucide="${escapeBookingHtml(block.icon || 'info')}" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>
+        <p class="text-sm text-cream/80">${escapeBookingHtml(getInfoBlockText(block))}</p>
+      </div>
+      `).join('')}
+    </div>
+  </section>
+  `;
 }
 
 function mapAdminItems(items) {
@@ -1089,6 +1200,12 @@ async function loadRestaurantData() {
     googleReviews: isRestaurantActive && restaurantData?.modules?.googleReviews !== false,
     whatsapp: isRestaurantActive && restaurantData?.modules?.whatsapp !== false
   };
+
+  const configuredInfoBlocks = Array.isArray(restaurantData?.infoBlocks)
+    ? restaurantData.infoBlocks
+    : (Array.isArray(restaurantData?.menu?.infoBlocks) ? restaurantData.menu.infoBlocks : null);
+
+  infoBlocks = normalizeInfoBlocks(configuredInfoBlocks);
 
   if (!siteConfig.modules.ordering && orderMode) {
     orderMode = false;
@@ -6100,7 +6217,7 @@ const menuHTML = visibleOrderCategoryKeys
 const cartSummary = calculateCartSummary();
 
       wrapper.innerHTML = `
-      <header class="relative overflow-hidden pt-28 pb-16 px-4 text-center animate-fade-up">
+      <header class="relative overflow-hidden pt-56 pb-16 px-4 text-center animate-fade-up">
   <div id="logo-container" class="mx-auto w-full max-w-4xl flex items-center justify-center">
     ${siteConfig.logoUrl
       ? `<img src="${siteConfig.logoUrl}" alt="TapCarta Demo" class="w-auto h-auto max-w-md mx-auto" loading="eager" fetchpriority="high" decoding="async" style="object-fit:contain; max-height:260px; display:block;">`
@@ -6343,24 +6460,7 @@ ${orderMode && !cartPanelOpen && cartSummary.itemCount > 0 ? `
 
 ${!orderMode && siteConfig.modules?.googleReviews ? renderReviewCTA(t) : ''}
 
-${!orderMode ? `
-  <section class="px-6 py-6 animate-fade-up delay-2">
-    <div class="space-y-3">
-      <div class="flex items-start gap-3 p-4 rounded-lg bg-darkCard border border-gold/20">
-        <i data-lucide="info" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>
-        <p class="text-sm text-cream/80">${t.noticeAllFries}</p>
-      </div>
-      <div class="flex items-start gap-3 p-4 rounded-lg bg-darkCard border border-gold/20">
-        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>
-        <p class="text-sm text-cream/80">${t.noticeTakeaway}</p>
-      </div>
-      <div class="flex items-start gap-3 p-4 rounded-lg bg-darkCard border border-gold/20">
-        <i data-lucide="flame" class="w-5 h-5 text-gold flex-shrink-0 mt-0.5"></i>
-        <p class="text-sm text-cream/80">${t.friesInfo}</p>
-      </div>
-    </div>
-  </section>
-` : ''}
+${!orderMode ? renderInfoBlocks() : ''}
 
     ${!orderMode ? `
   <section class="px-6 py-4 animate-fade-up delay-2 flex justify-center">

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.9';
+    const APP_VERSION = 'V1.2.15.10';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -4462,59 +4462,59 @@ function getOrderStatusLabel(status) {
   const labels = {
     fr: {
       pending: 'En attente de confirmation',
-      sent: 'Envoyée au restaurant',
-      processing: 'En cours de traitement par le restaurant',
+      sent: 'Demande envoyée au restaurant',
+      processing: 'Demande à emporter en cours de traitement',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
-      confirmed: 'Commande confirmée',
-      served: 'Commande servie',
-      not_served: 'Commande non servie',
-      refused: 'Commande refusée',
-      cancelled: 'Commande annulée',
-      service_unknown_no_action: 'Commande clôturée'
+      confirmed: 'Retrait confirmé',
+      served: 'Retrait effectué',
+      not_served: 'Retrait non effectué',
+      refused: 'Demande refusée',
+      cancelled: 'Demande annulée',
+      service_unknown_no_action: 'Demande clôturée'
     },
     es: {
       pending: 'Pendiente de confirmación',
-      sent: 'Enviado al restaurante',
-      processing: 'En tratamiento por el restaurante',
+      sent: 'Solicitud enviada al restaurante',
+      processing: 'Solicitud para llevar en tratamiento',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
-      confirmed: 'Pedido confirmado',
-      served: 'Pedido servido',
-      not_served: 'Pedido no servido',
-      refused: 'Pedido rechazado',
-      cancelled: 'Pedido cancelado',
-      service_unknown_no_action: 'Pedido cerrado'
+      confirmed: 'Recogida confirmada',
+      served: 'Recogida realizada',
+      not_served: 'Recogida no realizada',
+      refused: 'Solicitud rechazada',
+      cancelled: 'Solicitud cancelada',
+      service_unknown_no_action: 'Solicitud cerrada'
     },
     en: {
       pending: 'Awaiting confirmation',
-      sent: 'Sent to the restaurant',
-      processing: 'Being processed by the restaurant',
+      sent: 'Takeaway request sent',
+      processing: 'Takeaway request being processed',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
-      confirmed: 'Order confirmed',
-      served: 'Order served',
-      not_served: 'Order not served',
-      refused: 'Order refused',
-      cancelled: 'Order cancelled',
-      service_unknown_no_action: 'Order closed'
+      confirmed: 'Pickup confirmed',
+      served: 'Pickup completed',
+      not_served: 'Pickup not completed',
+      refused: 'Request refused',
+      cancelled: 'Request cancelled',
+      service_unknown_no_action: 'Request closed'
     },
     nl: {
       pending: 'Wacht op bevestiging',
-      sent: 'Verzonden naar het restaurant',
-      processing: 'Wordt verwerkt door het restaurant',
+      sent: 'Afhaalaanvraag verzonden',
+      processing: 'Afhaalaanvraag wordt verwerkt',
       modified: tDecision.statusModified,
       accepted_by_client: tDecision.statusAccepted,
       rejected_by_client: tDecision.statusRejected,
-      confirmed: 'Bestelling bevestigd',
-      served: 'Bestelling geserveerd',
-      not_served: 'Bestelling niet geserveerd',
-      refused: 'Bestelling geweigerd',
-      cancelled: 'Bestelling geannuleerd',
-      service_unknown_no_action: 'Bestelling afgesloten'
+      confirmed: 'Afhaling bevestigd',
+      served: 'Afhaling voltooid',
+      not_served: 'Afhaling niet voltooid',
+      refused: 'Aanvraag geweigerd',
+      cancelled: 'Aanvraag geannuleerd',
+      service_unknown_no_action: 'Aanvraag afgesloten'
     }
   };
 
@@ -6008,45 +6008,45 @@ function getOrderFeedbackTexts() {
       nameRequired: 'Veuillez indiquer votre nom pour continuer.',
       phoneRequired: 'Veuillez indiquer votre numéro de téléphone pour continuer.',
       namePhoneRequired: 'Veuillez indiquer votre nom et votre téléphone pour continuer.',
-      dateTimeRequired: 'Veuillez indiquer la date et l’heure souhaitées.',
-      cartEmpty: 'Ajoutez au moins un article à votre panier avant de valider votre commande.',
-      requiredReviewFields: 'Veuillez compléter les informations obligatoires de votre commande.',
+      dateTimeRequired: 'Veuillez indiquer la date et l’heure de retrait souhaitées.',
+      cartEmpty: 'Ajoutez au moins un article à votre panier avant d’envoyer votre demande.',
+      requiredReviewFields: 'Veuillez compléter les informations obligatoires pour le retrait.',
       invalidPhone: 'Veuillez entrer un numéro de téléphone valide.\nExemple : +34612345678',
-      sendError: "La commande n'a pas pu être envoyée au restaurant. Veuillez réessayer dans quelques instants ou contacter le restaurant.",
-      orderSent: 'Votre commande a bien été envoyée au restaurant. Elle est maintenant en attente de confirmation.'
+      sendError: "La demande à emporter n'a pas pu être envoyée au restaurant. Veuillez réessayer dans quelques instants ou contacter le restaurant.",
+      orderSent: 'Votre demande à emporter a bien été envoyée au restaurant. Elle reste en attente de confirmation.'
     },
     es: {
       nameRequired: 'Indica tu nombre para continuar.',
       phoneRequired: 'Indica tu número de teléfono para continuar.',
       namePhoneRequired: 'Indica tu nombre y tu teléfono para continuar.',
-      dateTimeRequired: 'Indica la fecha y la hora deseadas.',
-      cartEmpty: 'Añade al menos un artículo a tu cesta antes de validar el pedido.',
-      requiredReviewFields: 'Completa la información obligatoria de tu pedido.',
+      dateTimeRequired: 'Indica la fecha y la hora de recogida deseadas.',
+      cartEmpty: 'Añade al menos un artículo a tu cesta antes de enviar tu solicitud.',
+      requiredReviewFields: 'Completa la información obligatoria para la recogida.',
       invalidPhone: 'Introduce un número de teléfono válido.\nEjemplo: +34612345678',
-      sendError: 'No se ha podido enviar el pedido al restaurante. Inténtalo de nuevo en unos instantes o contacta con el restaurante.',
-      orderSent: 'Tu pedido se ha enviado correctamente al restaurante. Ahora está pendiente de confirmación.'
+      sendError: 'No se ha podido enviar la solicitud para llevar al restaurante. Inténtalo de nuevo en unos instantes o contacta con el restaurante.',
+      orderSent: 'Su solicitud para llevar se ha enviado correctamente al restaurante. Queda pendiente de confirmación.'
     },
     en: {
       nameRequired: 'Please enter your name to continue.',
       phoneRequired: 'Please enter your phone number to continue.',
       namePhoneRequired: 'Please enter your name and phone number to continue.',
-      dateTimeRequired: 'Please enter the preferred date and time.',
-      cartEmpty: 'Add at least one item to your cart before confirming your order.',
-      requiredReviewFields: 'Please complete the required order information.',
+      dateTimeRequired: 'Please enter the preferred pickup date and time.',
+      cartEmpty: 'Add at least one item to your cart before sending your request.',
+      requiredReviewFields: 'Please complete the required pickup information.',
       invalidPhone: 'Please enter a valid phone number.\nExample: +34612345678',
-      sendError: 'The order could not be sent to the restaurant. Please try again in a few moments or contact the restaurant.',
-      orderSent: 'Your order has been sent to the restaurant. It is now awaiting confirmation.'
+      sendError: 'The takeaway request could not be sent to the restaurant. Please try again in a few moments or contact the restaurant.',
+      orderSent: 'Your takeaway request has been sent to the restaurant. It is waiting for confirmation.'
     },
     nl: {
       nameRequired: 'Vul je naam in om verder te gaan.',
       phoneRequired: 'Vul je telefoonnummer in om verder te gaan.',
       namePhoneRequired: 'Vul je naam en telefoonnummer in om verder te gaan.',
-      dateTimeRequired: 'Vul de gewenste datum en het gewenste uur in.',
-      cartEmpty: 'Voeg minstens één artikel toe aan je mandje voordat je je bestelling bevestigt.',
-      requiredReviewFields: 'Vul de verplichte bestelgegevens in.',
+      dateTimeRequired: 'Vul de gewenste afhaaldatum en het gewenste afhaaluur in.',
+      cartEmpty: 'Voeg minstens één artikel toe aan je mandje voordat je je aanvraag verzendt.',
+      requiredReviewFields: 'Vul de verplichte afhaalgegevens in.',
       invalidPhone: 'Geef een geldig telefoonnummer op.\nVoorbeeld: +34612345678',
-      sendError: 'De bestelling kon niet naar het restaurant worden verzonden. Probeer het over enkele ogenblikken opnieuw of neem contact op met het restaurant.',
-      orderSent: 'Je bestelling is naar het restaurant verzonden. Ze wacht nu op bevestiging.'
+      sendError: 'De afhaalaanvraag kon niet naar het restaurant worden verzonden. Probeer het over enkele ogenblikken opnieuw of neem contact op met het restaurant.',
+      orderSent: 'Uw afhaalaanvraag is naar het restaurant verzonden. Ze wacht op bevestiging.'
     }
   };
 

@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.10';
+    const APP_VERSION = 'V1.2.15.11';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -4308,7 +4308,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Rechazar',
       acceptConfirm: '¿Aceptar la modificación propuesta por el restaurante?',
       rejectConfirm: '¿Rechazar la modificación propuesta por el restaurante?',
-      acceptedMessage: 'Has aceptado la modificación propuesta. Tu pedido queda validado con estos cambios.',
+      acceptedMessage: 'Has aceptado la modificación propuesta. Tu solicitud para llevar queda validada con estos cambios.',
       rejectedMessage: 'Has rechazado la modificación propuesta. El restaurante verá ahora tu respuesta.'
     };
   }
@@ -4322,7 +4322,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Reject',
       acceptConfirm: 'Accept the modification proposed by the restaurant?',
       rejectConfirm: 'Reject the modification proposed by the restaurant?',
-      acceptedMessage: 'You accepted the proposed modification. Your order is confirmed with these changes.',
+      acceptedMessage: 'You accepted the proposed modification. Your takeaway request is confirmed with these changes.',
       rejectedMessage: 'You rejected the proposed modification. The restaurant will now see your response.'
     };
   }
@@ -4336,7 +4336,7 @@ function getOrderClientDecisionTexts() {
       rejectButton: 'Weigeren',
       acceptConfirm: 'De door het restaurant voorgestelde wijziging aanvaarden?',
       rejectConfirm: 'De door het restaurant voorgestelde wijziging weigeren?',
-      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Uw bestelling is bevestigd met deze wijzigingen.',
+      acceptedMessage: 'U hebt de voorgestelde wijziging aanvaard. Uw afhaalaanvraag is bevestigd met deze wijzigingen.',
       rejectedMessage: 'U hebt de voorgestelde wijziging geweigerd. Het restaurant ziet nu uw antwoord.'
     };
   }
@@ -4349,7 +4349,7 @@ function getOrderClientDecisionTexts() {
     rejectButton: 'Refuser',
     acceptConfirm: 'Accepter la modification proposée par le restaurant ?',
     rejectConfirm: 'Refuser la modification proposée par le restaurant ?',
-    acceptedMessage: 'Vous avez accepté la modification proposée. Votre commande est validée avec ces changements.',
+    acceptedMessage: 'Vous avez accepté la modification proposée. Votre demande à emporter est validée avec ces changements.',
     rejectedMessage: 'Vous avez refusé la modification proposée. Le restaurant verra maintenant votre réponse.'
   };
 }
@@ -4562,46 +4562,46 @@ function getClientConfirmationPopupTexts(type) {
 
   const texts = {
     fr: {
-      title: isOrder ? 'Votre commande est confirmée' : 'Votre réservation est confirmée',
+      title: isOrder ? 'Retrait confirmé' : 'Votre réservation est confirmée',
       main: isOrder
-        ? 'Votre commande du {date} à {time} est bien confirmée par le restaurant.'
+        ? 'Votre demande à emporter du {date} à {time} est bien confirmée par le restaurant.'
         : 'Votre réservation du {date} à {time} est bien confirmée par le restaurant.',
       received: 'Confirmation reçue le {receivedAt}.',
       help: isOrder
-        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes commandes.'
+        ? 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans vos demandes à emporter.'
         : 'Après avoir cliqué sur “Lu”, vous pourrez la retrouver dans Voir mes réservations.',
       read: 'Lu'
     },
     es: {
-      title: isOrder ? 'Su pedido está confirmado' : 'Su reserva está confirmada',
+      title: isOrder ? 'Recogida confirmada' : 'Su reserva está confirmada',
       main: isOrder
-        ? 'Su pedido del {date} a las {time} ha sido confirmado por el restaurante.'
+        ? 'Su solicitud para llevar del {date} a las {time} ha sido confirmada por el restaurante.'
         : 'Su reserva del {date} a las {time} ha sido confirmada por el restaurante.',
       received: 'Confirmación recibida el {receivedAt}.',
       help: isOrder
-        ? 'Después de pulsar “Leído”, podrá encontrarlo en Ver mis pedidos.'
+        ? 'Después de pulsar “Leído”, podrá encontrarla en sus solicitudes para llevar.'
         : 'Después de pulsar “Leído”, podrá encontrarla en Ver mis reservas.',
       read: 'Leído'
     },
     en: {
-      title: isOrder ? 'Your order is confirmed' : 'Your reservation is confirmed',
+      title: isOrder ? 'Pickup confirmed' : 'Your reservation is confirmed',
       main: isOrder
-        ? 'Your order for {date} at {time} has been confirmed by the restaurant.'
+        ? 'Your takeaway request for {date} at {time} has been confirmed by the restaurant.'
         : 'Your reservation for {date} at {time} has been confirmed by the restaurant.',
       received: 'Confirmation received on {receivedAt}.',
       help: isOrder
-        ? 'After tapping “Read”, you can find it in View my orders.'
+        ? 'After tapping “Read”, you can find it in your takeaway requests.'
         : 'After tapping “Read”, you can find it in View my bookings.',
       read: 'Read'
     },
     nl: {
-      title: isOrder ? 'Uw bestelling is bevestigd' : 'Uw reservatie is bevestigd',
+      title: isOrder ? 'Afhaling bevestigd' : 'Uw reservatie is bevestigd',
       main: isOrder
-        ? 'Uw bestelling voor {date} om {time} is bevestigd door het restaurant.'
+        ? 'Uw afhaalaanvraag voor {date} om {time} is bevestigd door het restaurant.'
         : 'Uw reservatie voor {date} om {time} is bevestigd door het restaurant.',
       received: 'Bevestiging ontvangen op {receivedAt}.',
       help: isOrder
-        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn bestellingen bekijken.'
+        ? 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug bij uw afhaalaanvragen.'
         : 'Nadat u op “Gelezen” hebt gedrukt, vindt u ze terug via Mijn reservaties bekijken.',
       read: 'Gelezen'
     }
@@ -5081,8 +5081,8 @@ function getClientEntryChoiceTexts() {
   const texts = {
     fr: {
       orderTitle: 'Que souhaitez-vous faire ?',
-      newOrder: 'Nouvelle commande',
-      viewOrders: 'Voir mes commandes',
+      newOrder: 'Nouvelle demande à emporter',
+      viewOrders: 'Voir mes demandes à emporter',
       bookingTitle: 'Que souhaitez-vous faire ?',
       newBooking: 'Nouvelle réservation',
       viewBookings: 'Voir mes réservations',
@@ -5090,8 +5090,8 @@ function getClientEntryChoiceTexts() {
     },
     es: {
       orderTitle: '¿Qué desea hacer?',
-      newOrder: 'Nuevo pedido',
-      viewOrders: 'Ver mis pedidos',
+      newOrder: 'Nueva solicitud para llevar',
+      viewOrders: 'Ver mis solicitudes para llevar',
       bookingTitle: '¿Qué desea hacer?',
       newBooking: 'Nueva reserva',
       viewBookings: 'Ver mis reservas',
@@ -5099,8 +5099,8 @@ function getClientEntryChoiceTexts() {
     },
     en: {
       orderTitle: 'What would you like to do?',
-      newOrder: 'New order',
-      viewOrders: 'View my orders',
+      newOrder: 'New takeaway request',
+      viewOrders: 'View my takeaway requests',
       bookingTitle: 'What would you like to do?',
       newBooking: 'New booking',
       viewBookings: 'View my bookings',
@@ -5108,8 +5108,8 @@ function getClientEntryChoiceTexts() {
     },
     nl: {
       orderTitle: 'Wat wilt u doen?',
-      newOrder: 'Nieuwe bestelling',
-      viewOrders: 'Mijn bestellingen bekijken',
+      newOrder: 'Nieuwe afhaalaanvraag',
+      viewOrders: 'Mijn afhaalaanvragen bekijken',
       bookingTitle: 'Wat wilt u doen?',
       newBooking: 'Nieuwe reservatie',
       viewBookings: 'Mijn reservaties bekijken',
@@ -5267,112 +5267,112 @@ function renderLastOrderRequestCard() {
 
   const cardTexts = {
     fr: {
-      title: 'Ma commande',
+      title: 'Ma demande à emporter',
       status: 'Statut',
       view: 'Voir',
       reference: 'Référence',
       name: 'Nom',
       phone: 'Téléphone',
       date: 'Date',
-      time: 'Heure',
+      time: 'Heure de retrait',
       proposedTime: 'Horaire proposé',
       updatedAt: 'Dernière mise à jour',
       note: 'Remarque',
       items: 'Articles',
       total: 'Total',
       refusalReason: 'Motif du refus',
-      waiting: 'Votre commande a bien été transmise. Elle est en attente de confirmation par le restaurant.',
-      processing: 'Le restaurant a consulté votre commande et la traite actuellement.',
-      modified: 'Le restaurant vous propose une modification de votre commande.',
-      acceptedByClient: 'Vous avez accepté la modification proposée. Votre commande est validée avec ces changements.',
+      waiting: 'Votre demande à emporter a bien été transmise. Elle est en attente de confirmation par le restaurant.',
+      processing: 'Le restaurant a consulté votre demande et la traite actuellement.',
+      modified: 'Le restaurant vous propose une modification de votre demande à emporter.',
+      acceptedByClient: 'Vous avez accepté la modification proposée. Votre demande à emporter est validée avec ces changements.',
       rejectedByClient: 'Vous avez refusé la modification proposée. Votre demande n’est pas validée avec cette modification.',
-      confirmed: 'Le restaurant a confirmé votre commande.',
-      served: 'Votre commande a été servie.',
-      notServed: 'Votre commande est indiquée comme non servie.',
-      refused: 'Le restaurant a refusé votre commande.',
-      cancelled: 'Le restaurant a annulé votre commande.',
-      closed: 'Cette commande est clôturée.'
+      confirmed: 'Le restaurant a confirmé votre retrait.',
+      served: 'Votre retrait a été effectué.',
+      notServed: 'Votre retrait est indiqué comme non effectué.',
+      refused: 'Le restaurant a refusé votre demande.',
+      cancelled: 'Le restaurant a annulé votre demande.',
+      closed: 'Cette demande est clôturée.'
     },
     es: {
-      title: 'Mi pedido',
+      title: 'Mi solicitud para llevar',
       status: 'Estado',
       view: 'Ver',
       reference: 'Referencia',
       name: 'Nombre',
       phone: 'Teléfono',
       date: 'Fecha',
-      time: 'Hora',
+      time: 'Hora de recogida',
       proposedTime: 'Hora propuesta',
       updatedAt: 'Última actualización',
       note: 'Observación',
       items: 'Artículos',
       total: 'Total',
       refusalReason: 'Motivo del rechazo',
-      waiting: 'Tu pedido ha sido transmitido correctamente. Está pendiente de confirmación por el restaurante.',
-      processing: 'El restaurante ha consultado tu pedido y lo está gestionando.',
-      modified: 'El restaurante te propone una modificación de tu pedido.',
-      acceptedByClient: 'Has aceptado la modificación propuesta. Tu pedido queda validado con estos cambios.',
+      waiting: 'Tu solicitud para llevar se ha transmitido correctamente. Está pendiente de confirmación por el restaurante.',
+      processing: 'El restaurante ha consultado tu solicitud y la está gestionando.',
+      modified: 'El restaurante te propone una modificación de tu solicitud para llevar.',
+      acceptedByClient: 'Has aceptado la modificación propuesta. Tu solicitud para llevar queda validada con estos cambios.',
       rejectedByClient: 'Has rechazado la modificación propuesta. Tu solicitud no queda validada con esta modificación.',
-      confirmed: 'El restaurante ha confirmado tu pedido.',
-      served: 'Tu pedido ha sido servido.',
-      notServed: 'Tu pedido aparece como no servido.',
-      refused: 'El restaurante ha rechazado tu pedido.',
-      cancelled: 'El restaurante ha cancelado tu pedido.',
-      closed: 'Este pedido está cerrado.'
+      confirmed: 'El restaurante ha confirmado tu recogida.',
+      served: 'Tu recogida se ha realizado.',
+      notServed: 'Tu recogida aparece como no realizada.',
+      refused: 'El restaurante ha rechazado tu solicitud.',
+      cancelled: 'El restaurante ha cancelado tu solicitud.',
+      closed: 'Esta solicitud está cerrada.'
     },
     en: {
-      title: 'My order',
+      title: 'My takeaway request',
       status: 'Status',
       view: 'View',
       reference: 'Reference',
       name: 'Name',
       phone: 'Phone',
       date: 'Date',
-      time: 'Time',
+      time: 'Pickup time',
       proposedTime: 'Proposed time',
       updatedAt: 'Last update',
       note: 'Note',
       items: 'Items',
       total: 'Total',
       refusalReason: 'Reason for refusal',
-      waiting: 'Your order has been transmitted. It is awaiting confirmation from the restaurant.',
-      processing: 'The restaurant has opened your order and is currently processing it.',
-      modified: 'The restaurant proposes a modification to your order.',
-      acceptedByClient: 'You accepted the proposed modification. Your order is confirmed with these changes.',
+      waiting: 'Your takeaway request has been transmitted. It is awaiting confirmation from the restaurant.',
+      processing: 'The restaurant has opened your request and is currently processing it.',
+      modified: 'The restaurant proposes a modification to your takeaway request.',
+      acceptedByClient: 'You accepted the proposed modification. Your takeaway request is confirmed with these changes.',
       rejectedByClient: 'You rejected the proposed modification. Your request is not confirmed with this change.',
-      confirmed: 'The restaurant has confirmed your order.',
-      served: 'Your order has been served.',
-      notServed: 'Your order is marked as not served.',
-      refused: 'The restaurant has refused your order.',
-      cancelled: 'The restaurant has cancelled your order.',
-      closed: 'This order is closed.'
+      confirmed: 'The restaurant has confirmed your pickup.',
+      served: 'Your pickup has been completed.',
+      notServed: 'Your pickup is marked as not completed.',
+      refused: 'The restaurant has refused your request.',
+      cancelled: 'The restaurant has cancelled your request.',
+      closed: 'This request is closed.'
     },
     nl: {
-      title: 'Mijn bestelling',
+      title: 'Mijn afhaalaanvraag',
       status: 'Status',
       view: 'Bekijken',
       reference: 'Referentie',
       name: 'Naam',
       phone: 'Telefoon',
       date: 'Datum',
-      time: 'Uur',
+      time: 'Afhaaluur',
       proposedTime: 'Voorgesteld uur',
       updatedAt: 'Laatste update',
       note: 'Opmerking',
       items: 'Artikelen',
       total: 'Totaal',
       refusalReason: 'Reden van weigering',
-      waiting: 'Je bestelling is goed doorgestuurd. Ze wacht op bevestiging door het restaurant.',
-      processing: 'Het restaurant heeft je bestelling geopend en verwerkt ze momenteel.',
-      modified: 'Het restaurant stelt een wijziging van je bestelling voor.',
-      acceptedByClient: 'U hebt de voorgestelde wijziging aanvaard. Uw bestelling is bevestigd met deze wijzigingen.',
+      waiting: 'Je afhaalaanvraag is goed doorgestuurd. Ze wacht op bevestiging door het restaurant.',
+      processing: 'Het restaurant heeft je aanvraag geopend en verwerkt ze momenteel.',
+      modified: 'Het restaurant stelt een wijziging van je afhaalaanvraag voor.',
+      acceptedByClient: 'U hebt de voorgestelde wijziging aanvaard. Uw afhaalaanvraag is bevestigd met deze wijzigingen.',
       rejectedByClient: 'U hebt de voorgestelde wijziging geweigerd. Uw aanvraag is niet bevestigd met deze wijziging.',
-      confirmed: 'Het restaurant heeft je bestelling bevestigd.',
-      served: 'Je bestelling werd geserveerd.',
-      notServed: 'Je bestelling staat aangeduid als niet geserveerd.',
-      refused: 'Het restaurant heeft je bestelling geweigerd.',
-      cancelled: 'Het restaurant heeft je bestelling geannuleerd.',
-      closed: 'Deze bestelling is afgesloten.'
+      confirmed: 'Het restaurant heeft je afhaling bevestigd.',
+      served: 'Je afhaling werd voltooid.',
+      notServed: 'Je afhaling staat aangeduid als niet voltooid.',
+      refused: 'Het restaurant heeft je aanvraag geweigerd.',
+      cancelled: 'Het restaurant heeft je aanvraag geannuleerd.',
+      closed: 'Deze aanvraag is afgesloten.'
     }
   };
 

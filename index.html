@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.1.3';
+    const APP_VERSION = 'V1.3.1.4';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1309,12 +1309,24 @@ function buildStandardWhatsappHref(value) {
   return `https://wa.me/${normalized}`;
 }
 
-function isStandardMainModuleActive(value, fallback = true) {
+function getStandardMainModuleStatus(value, fallback = true) {
   if (value === undefined || value === null || value === '') {
-    return fallback;
+    return fallback ? 'active' : 'hidden';
   }
 
-  return value === 'active';
+  if (['active', 'standby', 'hidden'].includes(value)) {
+    return value;
+  }
+
+  return fallback ? 'active' : 'hidden';
+}
+
+function isStandardMainModuleVisible(value, fallback = true) {
+  return getStandardMainModuleStatus(value, fallback) !== 'hidden';
+}
+
+function isStandardMainModuleActive(value, fallback = true) {
+  return getStandardMainModuleStatus(value, fallback) === 'active';
 }
 
 function isStandardQuickModuleVisible(value, fallback = true) {
@@ -1392,10 +1404,26 @@ function applyStandardRestaurantSettings(settingsRow) {
     ? settingsRow.modules_json
     : {};
 
+  const orderingStatus = getStandardMainModuleStatus(
+    modules.ordering,
+    siteConfig.modules?.ordering !== false
+  );
+
+  const bookingStatus = getStandardMainModuleStatus(
+    modules.booking,
+    siteConfig.modules?.booking !== false
+  );
+
+  siteConfig.moduleStatuses = {
+    ...(siteConfig.moduleStatuses || {}),
+    ordering: orderingStatus,
+    booking: bookingStatus
+  };
+
   siteConfig.modules = {
     ...(siteConfig.modules || {}),
-    ordering: isStandardMainModuleActive(modules.ordering, siteConfig.modules?.ordering !== false),
-    booking: isStandardMainModuleActive(modules.booking, siteConfig.modules?.booking !== false),
+    ordering: orderingStatus !== 'hidden',
+    booking: bookingStatus !== 'hidden',
     preorderIndicative: siteConfig.modules?.preorderIndicative !== false,
     googleReviews: isStandardQuickModuleVisible(modules.googleReviews, siteConfig.modules?.googleReviews !== false),
     whatsapp: isStandardQuickModuleVisible(modules.whatsapp, siteConfig.modules?.whatsapp !== false),
@@ -1618,6 +1646,9 @@ async function loadRestaurantData() {
 seeMenu: 'Voir le menu',
 orderButton: 'À emporter',
 bookingButton: 'Réserver',
+bookingStandbyButton: 'Réservations en veille',
+orderingStandbyButton: 'À emporter en veille',
+standbyButtonHint: 'Ce service existe, mais il n’est pas disponible pour le moment.',
 orderModeTitle: 'Commande à emporter',
 orderModeText: 'Sélectionnez vos plats pour un retrait au restaurant.',
 closeButton: 'Fermer',
@@ -1743,6 +1774,9 @@ mariniere: { name: 'Moules marinières', subtitle: 'Le classique moules-frites' 
         seeMenu: 'Ver el menú',
 orderButton: 'Para llevar',
 bookingButton: 'Reservar',
+bookingStandbyButton: 'Reservas en espera',
+orderingStandbyButton: 'Para llevar en espera',
+standbyButtonHint: 'Este servicio existe, pero no está disponible por el momento.',
 orderModeTitle: 'Pedido para llevar',
 orderModeText: 'Seleccione sus platos para recoger en el restaurante.',
 closeButton: 'Cerrar',
@@ -1869,6 +1903,9 @@ mariniere: { name: 'Mejillones a la marinera', subtitle: 'El clásico de mejillo
        seeMenu: 'View menu',
 orderButton: 'Takeaway',
 bookingButton: 'Book',
+bookingStandbyButton: 'Bookings on standby',
+orderingStandbyButton: 'Takeaway on standby',
+standbyButtonHint: 'This service exists, but is not available right now.',
 orderModeTitle: 'Takeaway order',
 orderModeText: 'Select your dishes for restaurant pickup.',
 closeButton: 'Close',
@@ -1995,6 +2032,9 @@ mariniere: { name: 'Mussels marinière', subtitle: 'The classic mussels and frie
        seeMenu: 'Bekijk het menu',
 orderButton: 'Afhalen',
 bookingButton: 'Reserveren',
+bookingStandbyButton: 'Reservaties in wachtstand',
+orderingStandbyButton: 'Afhalen in wachtstand',
+standbyButtonHint: 'Deze dienst bestaat, maar is momenteel niet beschikbaar.',
 orderModeTitle: 'Afhaalbestelling',
 orderModeText: 'Selecteer uw gerechten om af te halen in het restaurant.',
 closeButton: 'Sluiten',
@@ -7293,19 +7333,33 @@ ${bookingMode ? `
  ${!orderMode ? `
   <section class="px-6 py-6 animate-fade-up delay-1">
     <div class="flex justify-center gap-4 flex-wrap">
-      ${siteConfig.modules?.ordering ? `
+      ${siteConfig.modules?.ordering ? (
+        siteConfig.moduleStatuses?.ordering === 'standby' ? `
+      <button type="button" title="${t.standbyButtonHint}" class="group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white/5 border-2 border-white/15 cursor-not-allowed opacity-55 shadow-lg">
+        <i data-lucide="shopping-bag" class="w-5 h-5 text-cream/45"></i>
+        <span class="text-sm font-semibold text-cream/55 tracking-wide">${t.orderingStandbyButton}</span>
+      </button>
+        ` : `
       <button onclick="handleOrderEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
       </button>
-      ` : ''}
+        `
+      ) : ''}
 
-      ${siteConfig.modules?.booking ? `
+      ${siteConfig.modules?.booking ? (
+        siteConfig.moduleStatuses?.booking === 'standby' ? `
+      <button type="button" title="${t.standbyButtonHint}" class="group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white/5 border-2 border-white/15 cursor-not-allowed opacity-55 shadow-lg">
+        <i data-lucide="calendar-days" class="w-5 h-5 text-cream/45"></i>
+        <span class="text-sm font-semibold text-cream/55 tracking-wide">${t.bookingStandbyButton}</span>
+      </button>
+        ` : `
       <button onclick="handleBookingEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="calendar-days" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.bookingButton}</span>
       </button>
-      ` : ''}
+        `
+      ) : ''}
 
       ${siteConfig.modules?.phone && siteConfig.phoneHref ? `
       <a href="${siteConfig.phoneHref}" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">

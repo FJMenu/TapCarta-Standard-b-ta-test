@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tapcarta-cache-v1-2-11';
+const CACHE_NAME = 'tapcarta-cache-V1-3-1';
 
 const APP_SHELL = [
   './manifest.webmanifest',
@@ -82,8 +82,11 @@ self.addEventListener('fetch', (event) => {
         }
 
         return new Response('', {
-          status: 504,
-          statusText: 'Gateway Timeout'
+          status: 200,
+          statusText: 'OK',
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8'
+          }
         });
       })
   );

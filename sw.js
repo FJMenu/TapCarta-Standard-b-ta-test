@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
     fetch(request)
       .then((response) => {
         if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
+          return response || new Response('', { status: 502, statusText: 'Bad Gateway' });
         }
 
         const responseClone = response.clone();
@@ -74,7 +74,18 @@ self.addEventListener('fetch', (event) => {
 
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(async () => {
+        const cachedResponse = await caches.match(request);
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return new Response('', {
+          status: 504,
+          statusText: 'Gateway Timeout'
+        });
+      })
   );
 });
 

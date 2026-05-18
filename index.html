@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.1.2';
+    const APP_VERSION = 'V1.3.1.3';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1279,6 +1279,137 @@ function resetMenuData() {
   menuMeta.menuVersion = null;
 }
 
+function buildStandardTelHref(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+
+  const normalized = raw.replace(/[^\d+]/g, '');
+
+  if (!normalized) return '';
+
+  return `tel:${normalized}`;
+}
+
+function buildStandardWhatsappHref(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+
+  let normalized = raw.replace(/[^\d+]/g, '');
+
+  if (normalized.startsWith('00')) {
+    normalized = normalized.slice(2);
+  }
+
+  if (normalized.startsWith('+')) {
+    normalized = normalized.slice(1);
+  }
+
+  if (!normalized) return '';
+
+  return `https://wa.me/${normalized}`;
+}
+
+function isStandardMainModuleActive(value, fallback = true) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  return value === 'active';
+}
+
+function isStandardQuickModuleVisible(value, fallback = true) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  return value !== 'hidden';
+}
+
+function normalizeStandardCustomerMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+
+  return messages.slice(0, 3).map((message, index) => {
+    const text = typeof message?.text === 'string'
+      ? message.text.trim().slice(0, 120)
+      : '';
+
+    return {
+      id: `customerMessage${index + 1}`,
+      visible: Boolean(message?.active) && Boolean(text),
+      icon: 'info',
+      text: {
+        fr: text,
+        es: text,
+        en: text,
+        nl: text
+      }
+    };
+  });
+}
+
+async function fetchStandardRestaurantSettings(restaurantId) {
+  if (!restaurantId || !isUuid(restaurantId)) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('restaurant_settings')
+      .select('contact_json, modules_json, customer_messages_json')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data || null;
+  } catch (error) {
+    console.warn('TapCarta Standard: impossible de lire restaurant_settings.', error);
+    return null;
+  }
+}
+
+function applyStandardRestaurantSettings(settingsRow) {
+  if (!settingsRow || typeof settingsRow !== 'object') return;
+
+  const contact = settingsRow.contact_json && typeof settingsRow.contact_json === 'object'
+    ? settingsRow.contact_json
+    : {};
+
+  const phoneHref = buildStandardTelHref(contact.phone);
+  const whatsappHref = buildStandardWhatsappHref(contact.whatsapp || contact.phone);
+
+  if (phoneHref) {
+    siteConfig.phoneHref = phoneHref;
+  }
+
+  if (whatsappHref) {
+    siteConfig.whatsappHref = whatsappHref;
+  }
+
+  const modules = settingsRow.modules_json && typeof settingsRow.modules_json === 'object'
+    ? settingsRow.modules_json
+    : {};
+
+  siteConfig.modules = {
+    ...(siteConfig.modules || {}),
+    ordering: isStandardMainModuleActive(modules.ordering, siteConfig.modules?.ordering !== false),
+    booking: isStandardMainModuleActive(modules.booking, siteConfig.modules?.booking !== false),
+    preorderIndicative: siteConfig.modules?.preorderIndicative !== false,
+    googleReviews: isStandardQuickModuleVisible(modules.googleReviews, siteConfig.modules?.googleReviews !== false),
+    whatsapp: isStandardQuickModuleVisible(modules.whatsapp, siteConfig.modules?.whatsapp !== false),
+    phone: isStandardQuickModuleVisible(modules.phone, siteConfig.modules?.phone !== false),
+    directions: isStandardQuickModuleVisible(modules.directions, siteConfig.modules?.directions !== false)
+  };
+
+  const customerMessages = normalizeStandardCustomerMessages(settingsRow.customer_messages_json);
+
+  if (customerMessages.length) {
+    infoBlocks = customerMessages;
+  }
+}
+
 async function loadRestaurantData() {
   let restaurantData = {};
 
@@ -1359,14 +1490,24 @@ async function loadRestaurantData() {
     booking: isRestaurantActive && restaurantData?.modules?.booking !== false,
     preorderIndicative: isRestaurantActive && restaurantData?.modules?.preorderIndicative !== false,
     googleReviews: isRestaurantActive && restaurantData?.modules?.googleReviews !== false,
-    whatsapp: isRestaurantActive && restaurantData?.modules?.whatsapp !== false
+    whatsapp: isRestaurantActive && restaurantData?.modules?.whatsapp !== false,
+    phone: isRestaurantActive,
+    directions: isRestaurantActive
   };
+
+  siteConfig.phoneHref = siteConfig.phoneHref || 'tel:0034672486699';
+  siteConfig.whatsappHref = siteConfig.whatsappHref || 'https://wa.me/34672486699';
 
   const configuredInfoBlocks = Array.isArray(restaurantData?.infoBlocks)
     ? restaurantData.infoBlocks
     : (Array.isArray(restaurantData?.menu?.infoBlocks) ? restaurantData.menu.infoBlocks : null);
 
   infoBlocks = normalizeInfoBlocks(configuredInfoBlocks);
+
+  if (LIVE_RESTAURANT_ID) {
+    const liveSettingsRow = await fetchStandardRestaurantSettings(LIVE_RESTAURANT_ID);
+    applyStandardRestaurantSettings(liveSettingsRow);
+  }
 
   if (!siteConfig.modules.ordering && orderMode) {
     orderMode = false;
@@ -7166,27 +7307,33 @@ ${bookingMode ? `
       </button>
       ` : ''}
 
-      <a href="tel:0034672486699" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+      ${siteConfig.modules?.phone && siteConfig.phoneHref ? `
+      <a href="${siteConfig.phoneHref}" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.call}</span>
       </a>
+      ` : ''}
 
+      ${siteConfig.modules?.directions ? `
       <button onclick="scrollToAddress()" class="btn-action group hidden lg:flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="map" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.addressButton}</span>
       </button>
+      ` : ''}
 
-    ${siteConfig.modules?.whatsapp ? `
-  <a href="https://wa.me/34672486699" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
+    ${siteConfig.modules?.whatsapp && siteConfig.whatsappHref ? `
+  <a href="${siteConfig.whatsappHref}" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
     <i data-lucide="message-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
     <span class="text-sm font-semibold text-cream tracking-wide">${t.whatsapp}</span>
   </a>
 ` : ''}
 
+      ${siteConfig.modules?.directions ? `
       <a href="https://maps.app.goo.gl/w1YhWUqoJ6qp8KDF9" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
         <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
         <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
       </a>
+      ` : ''}
     </div>
 
     <div class="mt-4 flex justify-center gap-3 flex-wrap">

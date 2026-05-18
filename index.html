@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.1.1';
+    const APP_VERSION = 'V1.3.1.2';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1280,12 +1280,23 @@ function resetMenuData() {
 }
 
 async function loadRestaurantData() {
-  const response = await fetch(RESTAURANT_JSON_URL, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Impossible de charger ${RESTAURANT_JSON_URL}`);
+  let restaurantData = {};
+
+  try {
+    const response = await fetch(RESTAURANT_JSON_URL, { cache: 'no-store' });
+
+    if (response.ok) {
+      restaurantData = await response.json();
+    } else {
+      console.warn(`TapCarta Standard: JSON local non trouvé (${RESTAURANT_JSON_URL}). Démarrage via slug URL / Supabase.`);
+    }
+  } catch (error) {
+    console.warn(`TapCarta Standard: impossible de charger le JSON local (${RESTAURANT_JSON_URL}). Démarrage via slug URL / Supabase.`, error);
   }
 
-  const restaurantData = await response.json();
+  if (!restaurantData || typeof restaurantData !== 'object') {
+    restaurantData = {};
+  }
 
   const resolvedSupabaseRestaurantId = await resolveStandardSupabaseRestaurantId(restaurantData);
 

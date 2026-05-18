@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.1.4';
+    const APP_VERSION = 'V1.3.1.5';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -5498,6 +5498,95 @@ function openClientEntryChoiceModal(type) {
   }
 }
 
+function getClientStandbyServiceTexts(type) {
+  const isOrder = type === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'À emporter momentanément en pause' : 'Réservations momentanément en pause',
+      body: 'Ce service est bien proposé par le restaurant. Il peut toutefois être temporairement mis en pause en période de forte affluence afin de garantir un service de qualité.',
+      close: 'Compris'
+    },
+    es: {
+      title: isOrder ? 'Para llevar temporalmente en pausa' : 'Reservas temporalmente en pausa',
+      body: 'Este servicio sí está ofrecido por el restaurante. Sin embargo, puede ponerse temporalmente en pausa en periodos de alta afluencia para garantizar un servicio de calidad.',
+      close: 'Entendido'
+    },
+    en: {
+      title: isOrder ? 'Takeaway temporarily paused' : 'Bookings temporarily paused',
+      body: 'This service is offered by the restaurant. However, it may be temporarily paused during busy periods to ensure quality service.',
+      close: 'Got it'
+    },
+    nl: {
+      title: isOrder ? 'Afhalen tijdelijk gepauzeerd' : 'Reservaties tijdelijk gepauzeerd',
+      body: 'Deze dienst wordt wel door het restaurant aangeboden. Hij kan echter tijdelijk worden gepauzeerd tijdens drukke periodes om een kwaliteitsvolle service te garanderen.',
+      close: 'Begrepen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function closeClientStandbyServiceModal() {
+  document.getElementById('client-standby-service-modal')?.remove();
+}
+
+function openClientStandbyServiceModal(type) {
+  closeClientStandbyServiceModal();
+
+  const texts = getClientStandbyServiceTexts(type);
+  const isOrder = type === 'order';
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-standby-service-modal" class="fixed inset-0 z-[160] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-md rounded-[28px] border border-gold/30 bg-[#0D0D0D] shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden">
+        <div class="border-b border-gold/15 px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-2xl border border-gold/35 bg-gold/10 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="${isOrder ? 'shopping-bag' : 'calendar-days'}" class="w-5 h-5 text-gold"></i>
+            </div>
+            <h3 class="font-display text-xl font-bold text-gold leading-tight">${texts.title}</h3>
+          </div>
+
+          <button
+            type="button"
+            onclick="closeClientStandbyServiceModal()"
+            class="btn-action px-3 py-2 rounded-xl border border-gold/25 text-xs font-semibold text-cream hover:bg-gold/10 transition-all"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <p class="text-sm text-cream/82 leading-relaxed">${texts.body}</p>
+
+          <button
+            type="button"
+            onclick="closeClientStandbyServiceModal()"
+            class="btn-action w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-br from-gold/22 to-gold/10 border-2 border-gold text-cream hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg"
+          >
+            <span class="text-sm font-semibold tracking-wide">${texts.close}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  const modal = document.getElementById('client-standby-service-modal');
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeClientStandbyServiceModal();
+      }
+    });
+  }
+
+  if (window.lucide) {
+    requestAnimationFrame(() => lucide.createIcons());
+  }
+}
+
 function handleOrderEntryClick() {
   if (hasClientOrderHistory()) {
     openClientEntryChoiceModal('order');
@@ -7335,9 +7424,9 @@ ${bookingMode ? `
     <div class="flex justify-center gap-4 flex-wrap">
       ${siteConfig.modules?.ordering ? (
         siteConfig.moduleStatuses?.ordering === 'standby' ? `
-      <button type="button" title="${t.standbyButtonHint}" class="group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white/5 border-2 border-white/15 cursor-not-allowed opacity-55 shadow-lg">
-        <i data-lucide="shopping-bag" class="w-5 h-5 text-cream/45"></i>
-        <span class="text-sm font-semibold text-cream/55 tracking-wide">${t.orderingStandbyButton}</span>
+      <button onclick="openClientStandbyServiceModal('order')" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/10 to-gold/5 border-2 border-gold/35 hover:border-gold/60 hover:from-gold/16 hover:to-gold/8 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/10">
+        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold/75 group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream/85 tracking-wide">${t.orderButton}</span>
       </button>
         ` : `
       <button onclick="handleOrderEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
@@ -7349,9 +7438,9 @@ ${bookingMode ? `
 
       ${siteConfig.modules?.booking ? (
         siteConfig.moduleStatuses?.booking === 'standby' ? `
-      <button type="button" title="${t.standbyButtonHint}" class="group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white/5 border-2 border-white/15 cursor-not-allowed opacity-55 shadow-lg">
-        <i data-lucide="calendar-days" class="w-5 h-5 text-cream/45"></i>
-        <span class="text-sm font-semibold text-cream/55 tracking-wide">${t.bookingStandbyButton}</span>
+      <button onclick="openClientStandbyServiceModal('booking')" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/10 to-gold/5 border-2 border-gold/35 hover:border-gold/60 hover:from-gold/16 hover:to-gold/8 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/10">
+        <i data-lucide="calendar-days" class="w-5 h-5 text-gold/75 group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream/85 tracking-wide">${t.bookingButton}</span>
       </button>
         ` : `
       <button onclick="handleBookingEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
@@ -7501,7 +7590,7 @@ ${!orderMode ? renderInfoBlocks() : ''}
             <div class="space-y-3">
               <div>
                 <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormName}</label>
-                <input
+                <in
                   type="text"
                   value="${orderForm.name}"
                   oninput="updateOrderFormField('name', this.value)"

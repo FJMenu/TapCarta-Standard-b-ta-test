@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.2.15.12';
+    const APP_VERSION = 'V1.3.1.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -939,6 +939,86 @@ const SW_URL = `${BASE_PATH}/sw.js?v=${APP_VERSION}`;
   <script>
   const RESTAURANT_JSON_URL = './restaurants/tapcarta-demo.json';
 
+function isUuid(value) {
+  return typeof value === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function normalizeStandardSlugCandidate(value) {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trim()
+    .replace(/^https?:\/\/[^/]+/i, '')
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .filter(Boolean)
+    .pop()
+    ?.replace(/\.html$/i, '')
+    ?.trim()
+    .toLowerCase() || '';
+}
+
+function getStandardSlugFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  const explicitSlug =
+    params.get('slug') ||
+    params.get('restaurant') ||
+    params.get('r');
+
+  if (explicitSlug) {
+    return normalizeStandardSlugCandidate(explicitSlug);
+  }
+
+  return normalizeStandardSlugCandidate(window.location.pathname);
+}
+
+async function resolveStandardSupabaseRestaurantId(restaurantData) {
+  const directCandidates = [
+    restaurantData?.supabaseRestaurantId,
+    restaurantData?.restaurantId,
+    restaurantData?.identity?.supabaseRestaurantId,
+    restaurantData?.identity?.restaurantId,
+    restaurantData?.identity?.id
+  ].filter(Boolean);
+
+  const directUuid = directCandidates.find(isUuid);
+  if (directUuid) return directUuid;
+
+  const slugCandidates = [
+    getStandardSlugFromUrl(),
+    restaurantData?.slug,
+    restaurantData?.identity?.slug,
+    restaurantData?.identity?.id
+  ]
+    .filter(Boolean)
+    .map(normalizeStandardSlugCandidate)
+    .filter(Boolean);
+
+  const uniqueSlugCandidates = [...new Set(slugCandidates)];
+
+  for (const slug of uniqueSlugCandidates) {
+    const { data, error } = await supabaseClient
+      .from('restaurants')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (!error && data?.id && isUuid(data.id)) {
+      return data.id;
+    }
+  }
+
+  console.warn('TapCarta Standard: aucun UUID Supabase trouvé pour ce restaurant.', {
+    urlSlug: getStandardSlugFromUrl(),
+    identity: restaurantData?.identity || null,
+    slugCandidates: uniqueSlugCandidates
+  });
+
+  return '';
+}
+
 let siteConfig = {
   identity: {
     id: "tapcarta-demo",
@@ -1207,10 +1287,18 @@ async function loadRestaurantData() {
 
   const restaurantData = await response.json();
 
-  if (restaurantData?.identity?.id) {
-    siteConfig.identity.id = restaurantData.identity.id;
-    LIVE_RESTAURANT_ID = restaurantData.identity.id;
+  const resolvedSupabaseRestaurantId = await resolveStandardSupabaseRestaurantId(restaurantData);
+
+  if (!restaurantData.identity || typeof restaurantData.identity !== 'object') {
+    restaurantData.identity = {};
   }
+
+  restaurantData.identity.localId = restaurantData.identity.id || '';
+  restaurantData.identity.id = resolvedSupabaseRestaurantId || restaurantData.identity.id || '';
+  restaurantData.supabaseRestaurantId = resolvedSupabaseRestaurantId || '';
+
+  siteConfig.identity.id = resolvedSupabaseRestaurantId || restaurantData.identity.localId || '';
+  LIVE_RESTAURANT_ID = resolvedSupabaseRestaurantId || '';
 
   if (restaurantData?.identity?.name) {
     siteConfig.restaurantName = restaurantData.identity.name;

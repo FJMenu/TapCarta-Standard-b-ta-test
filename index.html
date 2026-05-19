@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.1.6';
+    const APP_VERSION = 'V1.3.2.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1359,6 +1359,401 @@ function normalizeStandardCustomerMessages(messages) {
   });
 }
 
+const STANDARD_SERVICE_DAY_KEYS = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday'
+];
+
+function normalizeStandardHoursJson(value) {
+  if (!value) return null;
+
+  let source = value;
+
+  if (typeof value === 'string') {
+    try {
+      source = JSON.parse(value);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+
+  const normalizeSlots = (slots) => Array.isArray(slots)
+    ? slots
+        .map((slot) => ({
+          from: typeof slot?.from === 'string' ? slot.from.slice(0, 5) : '',
+          to: typeof slot?.to === 'string' ? slot.to.slice(0, 5) : ''
+        }))
+        .filter((slot) => isStandardValidTime(slot.from) && isStandardValidTime(slot.to) && standardTimeToMinutes(slot.to) > standardTimeToMinutes(slot.from))
+    : [];
+
+  const normalizeDays = (days) => {
+    const result = {};
+    const sourceDays = days && typeof days === 'object' && !Array.isArray(days) ? days : {};
+
+    STANDARD_SERVICE_DAY_KEYS.forEach((dayKey) => {
+      const day = sourceDays[dayKey] || {};
+      const slots = normalizeSlots(day.slots);
+
+      result[dayKey] = {
+        open: Boolean(day.open) && slots.length > 0,
+        slots
+      };
+    });
+
+    return result;
+  };
+
+  const normalizeModule = (moduleValue) => {
+    const moduleSource = moduleValue && typeof moduleValue === 'object' && !Array.isArray(moduleValue)
+      ? moduleValue
+      : {};
+
+    const rawDelay = Number(moduleSource.customDelayMinutes);
+    const allowedDelay = [0, 15, 30, 45, 60].includes(rawDelay) ? rawDelay : 30;
+
+    return {
+      mode: moduleSource.mode === 'specific' ? 'specific' : 'general',
+      specific: normalizeDays(moduleSource.specific),
+      delayMode: moduleSource.delayMode === 'custom' ? 'custom' : 'auto',
+      customDelayMinutes: allowedDelay
+    };
+  };
+
+  return {
+    general: normalizeDays(source.general),
+    booking: normalizeModule(source.booking),
+    ordering: normalizeModule(source.ordering)
+  };
+}
+
+function isStandardValidTime(value) {
+  return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function standardTimeToMinutes(value) {
+  if (!isStandardValidTime(value)) return null;
+
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function standardMinutesToTime(value) {
+  const minutes = Math.max(0, Math.min(23 * 60 + 59, Number(value) || 0));
+  const hoursPart = Math.floor(minutes / 60);
+  const minutesPart = minutes % 60;
+
+  return `${String(hoursPart).padStart(2, '0')}:${String(minutesPart).padStart(2, '0')}`;
+}
+
+function standardRoundMinutesUp(value, step = 15) {
+  return Math.ceil(value / step) * step;
+}
+
+function standardDateToInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function standardInputValueToDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+function getStandardServiceModuleKey(serviceType) {
+  return serviceType === 'booking' ? 'booking' : 'ordering';
+}
+
+function getStandardServiceDelayMinutes(serviceType) {
+  const moduleKey = getStandardServiceModuleKey(serviceType);
+  const config = siteConfig.serviceHours?.[moduleKey];
+
+  if (!config || typeof config !== 'object') {
+    return 30;
+  }
+
+  if (config.delayMode === 'custom') {
+    const delay = Number(config.customDelayMinutes);
+    return [0, 15, 30, 45, 60].includes(delay) ? delay : 30;
+  }
+
+  return 30;
+}
+
+function getStandardServiceDays(serviceType) {
+  const hours = siteConfig.serviceHours;
+
+  if (!hours || typeof hours !== 'object') {
+    return null;
+  }
+
+  const moduleKey = getStandardServiceModuleKey(serviceType);
+  const moduleConfig = hours[moduleKey] || {};
+  const useSpecific = moduleConfig.mode === 'specific';
+
+  if (useSpecific) {
+    return moduleConfig.specific || {};
+  }
+
+  return hours.general || {};
+}
+
+function hasStandardServiceHoursConfigured(serviceType) {
+  const days = getStandardServiceDays(serviceType);
+
+  if (!days || typeof days !== 'object') {
+    return false;
+  }
+
+  return STANDARD_SERVICE_DAY_KEYS.some((dayKey) => {
+    const day = days[dayKey];
+    return Boolean(day?.open) && Array.isArray(day.slots) && day.slots.length > 0;
+  });
+}
+
+function getStandardServiceSlotsForDate(serviceType, dateValue) {
+  const date = standardInputValueToDate(dateValue);
+
+  if (!date) {
+    return [];
+  }
+
+  const days = getStandardServiceDays(serviceType);
+
+  if (!days || typeof days !== 'object') {
+    return [];
+  }
+
+  const dayKey = STANDARD_SERVICE_DAY_KEYS[date.getDay()];
+  const day = days[dayKey];
+
+  if (!day?.open || !Array.isArray(day.slots)) {
+    return [];
+  }
+
+  const todayValue = standardDateToInputValue(new Date());
+  const delayMinutes = getStandardServiceDelayMinutes(serviceType);
+  const minAllowedDate = new Date(Date.now() + delayMinutes * 60 * 1000);
+  const minAllowedMinutes = dateValue === todayValue
+    ? standardRoundMinutesUp(minAllowedDate.getHours() * 60 + minAllowedDate.getMinutes(), 15)
+    : 0;
+
+  const options = [];
+
+  day.slots.forEach((slot) => {
+    const fromMinutes = standardTimeToMinutes(slot.from);
+    const toMinutes = standardTimeToMinutes(slot.to);
+
+    if (fromMinutes === null || toMinutes === null || toMinutes <= fromMinutes) {
+      return;
+    }
+
+    let cursor = Math.max(fromMinutes, minAllowedMinutes);
+    cursor = standardRoundMinutesUp(cursor, 15);
+
+    while (cursor < toMinutes) {
+      const value = standardMinutesToTime(cursor);
+      options.push({
+        value,
+        label: value
+      });
+
+      cursor += 15;
+    }
+  });
+
+  return options;
+}
+
+function getFirstStandardServiceSlot(serviceType) {
+  if (!hasStandardServiceHoursConfigured(serviceType)) {
+    return null;
+  }
+
+  const start = new Date();
+
+  for (let offset = 0; offset < 30; offset += 1) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset);
+    const dateValue = standardDateToInputValue(date);
+    const options = getStandardServiceSlotsForDate(serviceType, dateValue);
+
+    if (options.length > 0) {
+      return {
+        date: dateValue,
+        time: options[0].value
+      };
+    }
+  }
+
+  return null;
+}
+
+function isStandardSelectedServiceTimeValid(serviceType, dateValue, timeValue) {
+  if (!dateValue || !timeValue) {
+    return false;
+  }
+
+  return getStandardServiceSlotsForDate(serviceType, dateValue)
+    .some((option) => option.value === timeValue);
+}
+
+function updateStandardServiceDate(serviceType, value) {
+  if (serviceType === 'booking') {
+    bookingForm.date = value;
+    const options = getStandardServiceSlotsForDate('booking', bookingForm.date);
+    bookingForm.time = options.some((option) => option.value === bookingForm.time)
+      ? bookingForm.time
+      : (options[0]?.value || '');
+
+    clearBookingFeedback();
+    renderMenu();
+    return;
+  }
+
+  orderForm.date = value;
+  const options = getStandardServiceSlotsForDate('order', orderForm.date);
+  orderForm.time = options.some((option) => option.value === orderForm.time)
+    ? orderForm.time
+    : (options[0]?.value || '');
+
+  clearOrderFeedback();
+  renderMenu();
+}
+
+function getClientServiceHoursUnavailableTexts(serviceType, reason = 'notConfigured') {
+  const isOrder = serviceType === 'order';
+
+  const texts = {
+    fr: {
+      title: isOrder ? 'À emporter' : 'Réserver',
+      body: reason === 'noSlot'
+        ? 'Ce service est bien proposé par le restaurant, mais aucun créneau n’est disponible pour le moment.'
+        : 'Ce service est bien proposé par le restaurant, mais les horaires ne sont pas encore configurés. Vous pouvez contacter le restaurant directement.',
+      close: 'Compris'
+    },
+    es: {
+      title: isOrder ? 'Para llevar' : 'Reservar',
+      body: reason === 'noSlot'
+        ? 'Este servicio está disponible en el restaurante, pero no hay ningún horario disponible por el momento.'
+        : 'Este servicio está disponible en el restaurante, pero los horarios aún no están configurados. Puedes contactar directamente con el restaurante.',
+      close: 'Entendido'
+    },
+    en: {
+      title: isOrder ? 'Takeaway' : 'Booking',
+      body: reason === 'noSlot'
+        ? 'This service is available at the restaurant, but no time slot is available at the moment.'
+        : 'This service is available at the restaurant, but the hours are not configured yet. You can contact the restaurant directly.',
+      close: 'Got it'
+    },
+    nl: {
+      title: isOrder ? 'Afhalen' : 'Reserveren',
+      body: reason === 'noSlot'
+        ? 'Deze service wordt door het restaurant aangeboden, maar er is momenteel geen tijdslot beschikbaar.'
+        : 'Deze service wordt door het restaurant aangeboden, maar de openingsuren zijn nog niet ingesteld. Je kunt rechtstreeks contact opnemen met het restaurant.',
+      close: 'Begrepen'
+    }
+  };
+
+  return texts[currentLang] || texts.fr;
+}
+
+function closeClientServiceHoursUnavailableModal() {
+  document.getElementById('client-service-hours-unavailable-modal')?.remove();
+}
+
+function openClientServiceHoursUnavailableModal(serviceType, reason = 'notConfigured') {
+  closeClientServiceHoursUnavailableModal();
+
+  const texts = getClientServiceHoursUnavailableTexts(serviceType, reason);
+  const isOrder = serviceType === 'order';
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="client-service-hours-unavailable-modal" class="fixed inset-0 z-[165] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-md rounded-[28px] border border-gold/30 bg-[#0D0D0D] shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden">
+        <div class="border-b border-gold/15 px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-2xl border border-gold/35 bg-gold/10 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="${isOrder ? 'shopping-bag' : 'calendar-days'}" class="w-5 h-5 text-gold"></i>
+            </div>
+            <h3 class="font-display text-xl font-bold text-gold leading-tight">${texts.title}</h3>
+          </div>
+
+          <button
+            type="button"
+            onclick="closeClientServiceHoursUnavailableModal()"
+            class="btn-action px-3 py-2 rounded-xl border border-gold/25 text-xs font-semibold text-cream hover:bg-gold/10 transition-all"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="p-5 space-y-4 bg-[#101010]">
+          <p class="text-[15px] font-medium text-[#FAF6EE] leading-relaxed">${texts.body}</p>
+
+          <button
+            type="button"
+            onclick="closeClientServiceHoursUnavailableModal()"
+            class="btn-action w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-br from-gold/24 to-gold/12 border-2 border-gold text-[#FAF6EE] hover:from-gold/32 hover:to-gold/18 transition-all shadow-lg"
+          >
+            <span class="text-sm font-bold tracking-wide">${texts.close}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  const modal = document.getElementById('client-service-hours-unavailable-modal');
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeClientServiceHoursUnavailableModal();
+      }
+    });
+  }
+
+  if (window.lucide) {
+    requestAnimationFrame(() => lucide.createIcons());
+  }
+}
+
+function getStandardServiceEntryBlockReason(serviceType) {
+  if (!hasStandardServiceHoursConfigured(serviceType)) {
+    return 'notConfigured';
+  }
+
+  if (!getFirstStandardServiceSlot(serviceType)) {
+    return 'noSlot';
+  }
+
+  return '';
+}
+
 async function fetchStandardRestaurantSettings(restaurantId) {
   if (!restaurantId || !isUuid(restaurantId)) {
     return null;
@@ -1367,7 +1762,7 @@ async function fetchStandardRestaurantSettings(restaurantId) {
   try {
     const { data, error } = await supabaseClient
       .from('restaurant_settings')
-      .select('contact_json, modules_json, customer_messages_json')
+      .select('contact_json, modules_json, customer_messages_json, hours_json')
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
 
@@ -1430,6 +1825,8 @@ function applyStandardRestaurantSettings(settingsRow) {
     phone: isStandardQuickModuleVisible(modules.phone, siteConfig.modules?.phone !== false),
     directions: isStandardQuickModuleVisible(modules.directions, siteConfig.modules?.directions !== false)
   };
+
+  siteConfig.serviceHours = normalizeStandardHoursJson(settingsRow.hours_json);
 
   const customerMessages = normalizeStandardCustomerMessages(settingsRow.customer_messages_json);
 
@@ -2585,14 +2982,18 @@ function roundTimeToQuarter(timeStr) {
 }
 
 function initializeBookingForm() {
-  const defaults = getDefaultOrderDateTime();
+  const firstSlot = getFirstStandardServiceSlot('booking');
   const preorderEnabled = siteConfig.modules?.preorderIndicative !== false;
 
   bookingForm = {
     name: bookingForm.name || '',
     phone: bookingForm.phone || '',
-    date: bookingForm.date || defaults.date,
-    time: bookingForm.time || roundTimeToQuarter(defaults.time),
+    date: isStandardSelectedServiceTimeValid('booking', bookingForm.date, bookingForm.time)
+      ? bookingForm.date
+      : (firstSlot?.date || ''),
+    time: isStandardSelectedServiceTimeValid('booking', bookingForm.date, bookingForm.time)
+      ? bookingForm.time
+      : (firstSlot?.time || ''),
     people: bookingForm.people || '2',
     note: bookingForm.note || '',
     preorder: preorderEnabled && Array.isArray(bookingForm.preorder) ? bookingForm.preorder : []
@@ -4122,15 +4523,25 @@ function activateOrderMode() {
     return;
   }
 
+  const blockReason = getStandardServiceEntryBlockReason('order');
+
+  if (blockReason) {
+    orderMode = false;
+    bookingMode = false;
+    cartPanelOpen = false;
+    activeOrderCategory = 'all';
+    orderReviewOpen = false;
+    openClientServiceHoursUnavailableModal('order', blockReason);
+    return;
+  }
+
   orderMode = true;
   bookingMode = false;
   cartPanelOpen = false;
   activeOrderCategory = 'all';
   orderReviewOpen = false;
 
-  if (!orderForm.date && !orderForm.time) {
-    initializeOrderForm();
-  }
+  initializeOrderForm();
 
   renderMenu();
 
@@ -6256,6 +6667,14 @@ function activateBookingMode() {
     return;
   }
 
+  const blockReason = getStandardServiceEntryBlockReason('booking');
+
+  if (blockReason) {
+    bookingMode = false;
+    openClientServiceHoursUnavailableModal('booking', blockReason);
+    return;
+  }
+
   editingBookingRequestId = null;
   resetBookingForm();
 
@@ -6666,67 +7085,26 @@ function scrollToAddress() {
   }
 }
 
-function getDefaultOrderDateTime() {
-  const now = new Date();
-  const target = new Date(now.getTime() + 60 * 60 * 1000);
-
-  const minutes = target.getMinutes();
-  const roundedMinutes = Math.ceil(minutes / 10) * 10;
-
-  if (roundedMinutes === 60) {
-    target.setHours(target.getHours() + 1);
-    target.setMinutes(0, 0, 0);
-  } else {
-    target.setMinutes(roundedMinutes, 0, 0);
-  }
-
-  const year = target.getFullYear();
-  const month = String(target.getMonth() + 1).padStart(2, '0');
-  const day = String(target.getDate()).padStart(2, '0');
-  const hours = String(target.getHours()).padStart(2, '0');
-  const finalMinutes = String(target.getMinutes()).padStart(2, '0');
-
-  return {
-    date: `${year}-${month}-${day}`,
-    time: `${hours}:${finalMinutes}`
-  };
-}
-
 function initializeOrderForm() {
-  const defaults = getDefaultOrderDateTime();
+  const firstSlot = getFirstStandardServiceSlot('order');
 
   orderForm = {
-    name: '',
-    phone: '',
-    date: defaults.date,
-    time: defaults.time,
-    note: ''
+    name: orderForm.name || '',
+    phone: orderForm.phone || '',
+    date: isStandardSelectedServiceTimeValid('order', orderForm.date, orderForm.time)
+      ? orderForm.date
+      : (firstSlot?.date || ''),
+    time: isStandardSelectedServiceTimeValid('order', orderForm.date, orderForm.time)
+      ? orderForm.time
+      : (firstSlot?.time || ''),
+    note: orderForm.note || ''
   };
 }
-function getHourOptions() {
-  return Array.from({ length: 24 }, (_, index) =>
-    String(index).padStart(2, '0')
-  );
-}
 
-function getMinuteOptions() {
-  return ['00', '10', '20', '30', '40', '50'];
-}
-
-function getOrderFormTimeParts() {
-  const [hours = '00', minutes = '00'] = (orderForm.time || '00:00').split(':');
-  return { hours, minutes };
-}
-
-function updateOrderFormTimePart(part, value) {
-  const currentParts = getOrderFormTimeParts();
-
-  const nextHours = part === 'hours' ? value : currentParts.hours;
-  const nextMinutes = part === 'minutes' ? value : currentParts.minutes;
-
+function updateOrderFormTime(value) {
   orderForm = {
     ...orderForm,
-    time: `${nextHours}:${nextMinutes}`
+    time: value
   };
 
   if (orderFeedback?.type === 'error') {
@@ -7298,7 +7676,7 @@ ${bookingMode ? `
       <input
         type="date"
         value="${bookingForm.date || ''}"
-        oninput="bookingForm.date = this.value"
+        oninput="updateStandardServiceDate('booking', this.value)"
         class="w-full rounded-xl border border-gold/25 bg-black/30 pl-11 pr-3 py-2.5 text-sm text-cream focus:outline-none focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
       >
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -7322,16 +7700,17 @@ ${bookingMode ? `
   <div class="flex items-stretch gap-2">
     <div class="relative flex-1">
       <select
-        onchange="bookingForm.time = this.value"
+        onchange="bookingForm.time = this.value; clearBookingFeedback(); renderMenu();"
         class="w-full appearance-none rounded-xl border border-gold/25 bg-black/30 pl-11 pr-10 py-2.5 text-sm text-cream focus:outline-none focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+        ${getStandardServiceSlotsForDate('booking', bookingForm.date).length ? '' : 'disabled'}
       >
-        ${Array.from({ length: 96 }, (_, i) => {
-          const hours = String(Math.floor(i / 4)).padStart(2, '0');
-          const minutes = String((i % 4) * 15).padStart(2, '0');
-          const value = `${hours}:${minutes}`;
-          const selected = (bookingForm.time || '') === value ? 'selected' : '';
-          return `<option value="${value}" ${selected}>${value}</option>`;
-        }).join('')}
+        ${getStandardServiceSlotsForDate('booking', bookingForm.date).length
+          ? getStandardServiceSlotsForDate('booking', bookingForm.date).map((option) => {
+              const selected = (bookingForm.time || '') === option.value ? 'selected' : '';
+              return `<option value="${option.value}" ${selected}>${option.label}</option>`;
+            }).join('')
+          : `<option value="">${currentLang === 'es' ? 'Sin horario disponible' : currentLang === 'en' ? 'No slot available' : currentLang === 'nl' ? 'Geen tijdslot beschikbaar' : 'Aucun créneau disponible'}</option>`
+        }
       </select>
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
         <i data-lucide="clock-3" class="w-4 h-4 text-gold/85"></i>
@@ -7603,7 +7982,7 @@ ${!orderMode ? renderInfoBlocks() : ''}
                     <input
                       type="date"
                       value="${orderForm.date}"
-                      oninput="updateOrderFormField('date', this.value)"
+                      oninput="updateStandardServiceDate('order', this.value)"
                       class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50"
                     >
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
@@ -7614,37 +7993,22 @@ ${!orderMode ? renderInfoBlocks() : ''}
 
                 <div>
                   <label class="block text-xs font-medium text-cream/80 mb-1">${t.orderFormTime}</label>
-                  <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-                    <div class="relative">
-                      <select
-                        onchange="updateOrderFormTimePart('hours', this.value)"
-                        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
-                      >
-                        ${getHourOptions().map(hour => {
-                          const selected = getOrderFormTimeParts().hours === hour ? 'selected' : '';
-                          return `<option value="${hour}" ${selected}>${hour}</option>`;
-                        }).join('')}
-                      </select>
-                      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                        <i data-lucide="clock-3" class="w-4 h-4 text-gold"></i>
-                      </div>
-                    </div>
-
-                    <span class="text-gold font-semibold">:</span>
-
-                    <div class="relative">
-                      <select
-                        onchange="updateOrderFormTimePart('minutes', this.value)"
-                        class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
-                      >
-                        ${getMinuteOptions().map(minute => {
-                          const selected = getOrderFormTimeParts().minutes === minute ? 'selected' : '';
-                          return `<option value="${minute}" ${selected}>${minute}</option>`;
-                        }).join('')}
-                      </select>
-                      <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-gold"></i>
-                      </div>
+                  <div class="relative">
+                    <select
+                      onchange="updateOrderFormTime(this.value)"
+                      class="w-full rounded-lg bg-black/20 border border-gold/20 px-3 py-2 pr-10 text-sm text-cream focus:outline-none focus:border-gold/50 appearance-none"
+                      ${getStandardServiceSlotsForDate('order', orderForm.date).length ? '' : 'disabled'}
+                    >
+                      ${getStandardServiceSlotsForDate('order', orderForm.date).length
+                        ? getStandardServiceSlotsForDate('order', orderForm.date).map((option) => {
+                            const selected = (orderForm.time || '') === option.value ? 'selected' : '';
+                            return `<option value="${option.value}" ${selected}>${option.label}</option>`;
+                          }).join('')
+                        : `<option value="">${currentLang === 'es' ? 'Sin horario disponible' : currentLang === 'en' ? 'No slot available' : currentLang === 'nl' ? 'Geen tijdslot beschikbaar' : 'Aucun créneau disponible'}</option>`
+                      }
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <i data-lucide="clock-3" class="w-4 h-4 text-gold"></i>
                     </div>
                   </div>
                 </div>

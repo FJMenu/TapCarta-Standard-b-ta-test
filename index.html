@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.2.3';
+    const APP_VERSION = 'V1.3.2.4';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -39,15 +39,29 @@ function normalizeRequestItems(items) {
   }));
 }
 
-async function insertLiveRequest(payload) {
-  const { data, error } = await supabaseClient
+ async function insertLiveRequest(payload) {
+  const requestId =
+    payload?.id ||
+    (window.crypto?.randomUUID ? window.crypto.randomUUID() : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const payloadToInsert = {
+    ...payload,
+    id: requestId
+  };
+
+  console.log('TapCarta Standard request payload:', payloadToInsert);
+
+  const { error } = await supabaseClient
     .from('requests')
-    .insert([payload])
-    .select()
-    .single();
+    .insert([payloadToInsert]);
 
   if (error) throw error;
-  return data;
+
+  return {
+    ...payloadToInsert,
+    created_at: new Date().toISOString(),
+    updated_at: null
+  };
 }
 
  async function fetchLiveRequestById(requestId, requestType = null) {

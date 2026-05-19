@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.2.2';
+    const APP_VERSION = 'V1.3.2.3';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1558,9 +1558,11 @@ function getStandardServiceSlotsForDate(serviceType, dateValue) {
 
   const todayValue = standardDateToInputValue(new Date());
   const delayMinutes = getStandardServiceDelayMinutes(serviceType);
+  const delayToleranceMinutes = 5;
   const minAllowedDate = new Date(Date.now() + delayMinutes * 60 * 1000);
+  const minAllowedRawMinutes = minAllowedDate.getHours() * 60 + minAllowedDate.getMinutes();
   const minAllowedMinutes = dateValue === todayValue
-    ? standardRoundMinutesUp(minAllowedDate.getHours() * 60 + minAllowedDate.getMinutes(), 15)
+    ? Math.max(0, minAllowedRawMinutes - delayToleranceMinutes)
     : 0;
 
   const options = [];
@@ -1573,15 +1575,16 @@ function getStandardServiceSlotsForDate(serviceType, dateValue) {
       return;
     }
 
-    let cursor = Math.max(fromMinutes, minAllowedMinutes);
-    cursor = standardRoundMinutesUp(cursor, 15);
+    let cursor = standardRoundMinutesUp(fromMinutes, 15);
 
     while (cursor < toMinutes) {
-      const value = standardMinutesToTime(cursor);
-      options.push({
-        value,
-        label: value
-      });
+      if (cursor >= minAllowedMinutes) {
+        const value = standardMinutesToTime(cursor);
+        options.push({
+          value,
+          label: value
+        });
+      }
 
       cursor += 15;
     }
@@ -4327,7 +4330,9 @@ function getBookingFeedbackTexts() {
       dateTimePeopleRequired: 'Veuillez compléter la date, l’heure et le nombre de personnes.',
       invalidPhone: 'Veuillez entrer un numéro de téléphone valide.\nExemple : +34612345678',
       invalidPeople: 'Le nombre de personnes doit être au minimum de 1.',
-      sendRequired: 'Veuillez compléter les informations obligatoires de votre réservation.'
+      sendRequired: 'Veuillez compléter les informations obligatoires de votre réservation.',
+      sendError: "La réservation n'a pas pu être envoyée au restaurant. Veuillez réessayer dans quelques instants ou contacter le restaurant.",
+      bookingSent: 'Votre réservation a bien été envoyée au restaurant. Elle reste en attente de confirmation.'
     },
     es: {
       nameRequired: 'Indica tu nombre para continuar.',
@@ -4336,7 +4341,9 @@ function getBookingFeedbackTexts() {
       dateTimePeopleRequired: 'Completa la fecha, la hora y el número de personas.',
       invalidPhone: 'Introduce un número de teléfono válido.\nEjemplo: +34612345678',
       invalidPeople: 'El número de personas debe ser como mínimo 1.',
-      sendRequired: 'Completa la información obligatoria de tu reserva.'
+      sendRequired: 'Completa la información obligatoria de tu reserva.',
+      sendError: 'No se ha podido enviar la reserva al restaurante. Inténtalo de nuevo en unos instantes o contacta con el restaurante.',
+      bookingSent: 'Tu reserva se ha enviado correctamente al restaurante. Queda pendiente de confirmación.'
     },
     en: {
       nameRequired: 'Please enter your name to continue.',
@@ -4345,7 +4352,9 @@ function getBookingFeedbackTexts() {
       dateTimePeopleRequired: 'Please complete the date, time and number of guests.',
       invalidPhone: 'Please enter a valid phone number.\nExample: +34612345678',
       invalidPeople: 'The number of guests must be at least 1.',
-      sendRequired: 'Please complete the required booking information.'
+      sendRequired: 'Please complete the required booking information.',
+      sendError: 'The booking could not be sent to the restaurant. Please try again in a few moments or contact the restaurant.',
+      bookingSent: 'Your booking request has been sent to the restaurant. It is waiting for confirmation.'
     },
     nl: {
       nameRequired: 'Vul je naam in om verder te gaan.',
@@ -4354,7 +4363,9 @@ function getBookingFeedbackTexts() {
       dateTimePeopleRequired: 'Vul de datum, het uur en het aantal personen in.',
       invalidPhone: 'Geef een geldig telefoonnummer op.\nVoorbeeld: +34612345678',
       invalidPeople: 'Het aantal personen moet minstens 1 zijn.',
-      sendRequired: 'Vul de verplichte reservatiegegevens in.'
+      sendRequired: 'Vul de verplichte reservatiegegevens in.',
+      sendError: 'De reservatie kon niet naar het restaurant worden verzonden. Probeer het over enkele ogenblikken opnieuw of neem contact op met het restaurant.',
+      bookingSent: 'Je reservatieaanvraag is naar het restaurant verzonden. Ze wacht op bevestiging.'
     }
   };
 
@@ -4431,6 +4442,12 @@ async function validateAndSubmitBooking() {
     return;
   }
 
+  if (!isStandardSelectedServiceTimeValid('booking', bookingForm.date, bookingForm.time)) {
+    setBookingFeedback('error', 'dateTimePeopleRequired');
+    renderMenu();
+    return;
+  }
+
   const normalizedPhone = bookingForm.phone.replace(/[^\d+]/g, '');
   const digitCount = normalizedPhone.replace(/\D/g, '').length;
   const phonePattern = /^\+?[0-9]{8,15}$/;
@@ -4450,9 +4467,18 @@ async function validateAndSubmitBooking() {
   bookingForm.phone = normalizedPhone;
   clearBookingFeedback();
 
-  const existingBookingRequests = LIVE_REQUESTS_ENABLED
-    ? await fetchLiveRequestsByType('booking')
-    : await readBookingRequestsFromStorage();
+  let existingBookingRequests = [];
+
+  try {
+    existingBookingRequests = LIVE_REQUESTS_ENABLED
+      ? await fetchLiveRequestsByType('booking')
+      : await readBookingRequestsFromStorage();
+  } catch (error) {
+    console.error('TapCarta booking Supabase read error:', error);
+    setBookingFeedback('error', 'sendError');
+    renderMenu();
+    return;
+  }
 
   const existingBookingRequest = editingBookingRequestId
     ? existingBookingRequests.find((request) => request && request.requestId === editingBookingRequestId)
@@ -4481,25 +4507,35 @@ async function validateAndSubmitBooking() {
   let bookingRequests;
   const isEditingExistingBooking = Boolean(existingBookingRequest);
 
-  if (existingBookingRequest) {
-    const syncedBookingRequest = await updateStoredBookingRequest(bookingRequest);
+  try {
+    if (existingBookingRequest) {
+      const syncedBookingRequest = await updateStoredBookingRequest(bookingRequest);
 
-    if (!syncedBookingRequest) {
-      renderMenu();
-      return;
+      if (!syncedBookingRequest) {
+        setBookingFeedback('error', 'sendError');
+        renderMenu();
+        return;
+      }
+
+      bookingRequests = LIVE_REQUESTS_ENABLED
+        ? await fetchLiveRequestsByType('booking')
+        : await readBookingRequestsFromStorage();
+    } else {
+      bookingRequests = await saveBookingRequestLocally(bookingRequest);
     }
-
-    bookingRequests = LIVE_REQUESTS_ENABLED
-      ? await fetchLiveRequestsByType('booking')
-      : await readBookingRequestsFromStorage();
-  } else {
-    bookingRequests = await saveBookingRequestLocally(bookingRequest);
+  } catch (error) {
+    console.error('TapCarta booking Supabase save error:', error);
+    setBookingFeedback('error', 'sendError');
+    renderMenu();
+    return;
   }
 
   editingBookingRequestId = null;
 
   console.log('TapCarta booking request saved:', bookingRequest);
   console.log('TapCarta booking requests history:', bookingRequests);
+
+  setBookingFeedback('success', 'bookingSent');
 
   resetBookingForm();
   renderMenu();

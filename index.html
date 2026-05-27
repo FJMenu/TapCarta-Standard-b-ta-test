@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V1.3.3.2';
+    const APP_VERSION = 'V2.1.1.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1849,6 +1849,107 @@ function applyStandardRestaurantSettings(settingsRow) {
 
   if (customerMessages.length) {
     infoBlocks = customerMessages;
+  }
+}
+
+function normalizeStandardPublicStatus(value) {
+  if (['waiting_page', 'ready_for_review', 'live', 'suspended'].includes(value)) {
+    return value;
+  }
+
+  return 'waiting_page';
+}
+
+function normalizeStandardMenuPublicationStatus(value) {
+  if ([
+    'not_started',
+    'encoding',
+    'ready_for_restaurant_review',
+    'validated_by_restaurant',
+    'published',
+    'needs_update'
+  ].includes(value)) {
+    return value;
+  }
+
+  return 'not_started';
+}
+
+function isStandardPublicMenuLive() {
+  return (
+    siteConfig.publicPageStatus === 'live' &&
+    siteConfig.menuPublicationStatus === 'published'
+  );
+}
+
+async function fetchStandardPublicRestaurant(restaurantId) {
+  if (!restaurantId || !isUuid(restaurantId)) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('restaurants')
+      .select(`
+        id,
+        name,
+        slug,
+        public_url,
+        logo_url,
+        google_reviews_url,
+        google_maps_url,
+        public_page_status,
+        menu_publication_status
+      `)
+      .eq('id', restaurantId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data || null;
+  } catch (error) {
+    console.warn('TapCarta Standard: impossible de lire restaurants.', error);
+    return null;
+  }
+}
+
+function applyStandardPublicRestaurant(restaurantRow) {
+  if (!restaurantRow || typeof restaurantRow !== 'object') return;
+
+  siteConfig.publicRestaurant = restaurantRow;
+
+  siteConfig.publicPageStatus = normalizeStandardPublicStatus(
+    restaurantRow.public_page_status
+  );
+
+  siteConfig.menuPublicationStatus = normalizeStandardMenuPublicationStatus(
+    restaurantRow.menu_publication_status
+  );
+
+  if (restaurantRow.name) {
+    siteConfig.restaurantName = restaurantRow.name;
+  }
+
+  if (restaurantRow.slug) {
+    siteConfig.slug = restaurantRow.slug;
+  }
+
+  if (restaurantRow.public_url) {
+    siteConfig.publicUrl = restaurantRow.public_url;
+  }
+
+  if (restaurantRow.logo_url) {
+    siteConfig.logoUrl = restaurantRow.logo_url;
+  }
+
+  if (restaurantRow.google_reviews_url) {
+    siteConfig.reviewUrl = restaurantRow.google_reviews_url;
+  }
+
+  if (restaurantRow.google_maps_url) {
+    siteConfig.directionsHref = restaurantRow.google_maps_url;
   }
 }
 

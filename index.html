@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V2.1.1.2';
+    const APP_VERSION = 'V2.2.1.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1120,7 +1120,8 @@ let menuMeta = {
     suggestions: { visible: true, order: 9999, updatedAt: null, name: '' },
     supplements: { visible: true, order: 9999, updatedAt: null, name: '' },
     boissons: { visible: true, order: 9999, updatedAt: null, name: '' }
-  }
+  },
+  subcategories: {}
 };
 
 function formatAdminPrice(price) {
@@ -1252,8 +1253,17 @@ function renderInfoBlocks() {
   `;
 }
 
-function mapAdminItems(items) {
+function mapAdminItems(items, options = {}) {
   if (!Array.isArray(items)) return [];
+
+  const categoryId = options.categoryId || '';
+  const categoryName = options.categoryName || '';
+  const subcategoryId = options.subcategoryId || '';
+  const subcategoryName = options.subcategoryName || '';
+  const subcategoryTranslations =
+    options.subcategoryTranslations && typeof options.subcategoryTranslations === 'object'
+      ? options.subcategoryTranslations
+      : {};
 
   return items
     .map((item, index) => ({
@@ -1275,9 +1285,44 @@ function mapAdminItems(items) {
       adminSubtitle: rawItem.subtitle || '',
       visible: rawItem.visible !== false,
       available: rawItem.available !== false,
+      takeawayEnabled: rawItem.takeawayEnabled !== false,
       order: Number.isFinite(rawItem.order) ? rawItem.order : 9999,
-      updatedAt: rawItem.updatedAt || null
+      updatedAt: rawItem.updatedAt || null,
+      categoryId,
+      categoryName,
+      subcategoryId,
+      subcategoryName,
+      subcategoryTranslations
     }));
+}
+
+function mapAdminCategoryItems(category) {
+  if (!category || typeof category !== 'object') return [];
+
+  const directItems = mapAdminItems(category.items, {
+    categoryId: category.id || '',
+    categoryName: category.name || ''
+  });
+
+  const subcategoryItems = Array.isArray(category.subcategories)
+    ? category.subcategories
+        .filter((subcategory) => subcategory && subcategory.visible !== false)
+        .sort((a, b) => ((a.order || 9999) - (b.order || 9999)))
+        .flatMap((subcategory) =>
+          mapAdminItems(subcategory.items, {
+            categoryId: category.id || '',
+            categoryName: category.name || '',
+            subcategoryId: subcategory.id || '',
+            subcategoryName: subcategory.name || '',
+            subcategoryTranslations:
+              subcategory.translations && typeof subcategory.translations === 'object'
+                ? subcategory.translations
+                : {}
+          })
+        )
+    : [];
+
+  return [...directItems, ...subcategoryItems];
 }
 
 function resetMenuData() {
@@ -1287,6 +1332,10 @@ function resetMenuData() {
 
   Object.keys(menuMeta.categories).forEach(categoryKey => {
     delete menuMeta.categories[categoryKey];
+  });
+
+  Object.keys(menuMeta.subcategories || {}).forEach(subcategoryKey => {
+    delete menuMeta.subcategories[subcategoryKey];
   });
 
   menuMeta.updatedAt = null;
@@ -2095,15 +2144,34 @@ async function loadRestaurantData() {
         translations:
           category.translations && typeof category.translations === 'object'
             ? category.translations
-            : {}
+            : {},
+        hasSubcategories: Array.isArray(category.subcategories) && category.subcategories.length > 0
       };
+
+      if (Array.isArray(category.subcategories)) {
+        category.subcategories.forEach((subcategory) => {
+          if (!subcategory?.id) return;
+
+          menuMeta.subcategories[subcategory.id] = {
+            parentCategoryId: category.id,
+            visible: subcategory.visible !== false,
+            order: Number.isFinite(subcategory.order) ? subcategory.order : 9999,
+            updatedAt: subcategory.updatedAt || null,
+            name: subcategory.name || '',
+            translations:
+              subcategory.translations && typeof subcategory.translations === 'object'
+                ? subcategory.translations
+                : {}
+          };
+        });
+      }
 
       if (category.visible === false) {
         menuData[category.id] = [];
         return;
       }
 
-      menuData[category.id] = mapAdminItems(category.items);
+      menuData[category.id] = mapAdminCategoryItems(category);
     });
   }
 

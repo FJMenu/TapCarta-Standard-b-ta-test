@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V2.3.1.2';
+    const APP_VERSION = 'V2.3.2.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1186,36 +1186,19 @@ function getMenuSubcategoryLabel(subcategoryId, item = null) {
     ''
   );
 }
-function renderCategory(categoryKey, categoryLabel, t) {
+function getMenuCategoryVisibleItems(categoryKey) {
   const categoryMeta = menuMeta.categories[categoryKey] || {};
-  if (!menuData[categoryKey]) return '';
-  if (categoryMeta.visible === false) return '';
 
-  const items = (menuData[categoryKey] || []).filter(
+  if (!menuData[categoryKey]) return [];
+  if (categoryMeta.visible === false) return [];
+
+  return (menuData[categoryKey] || []).filter(
     item => item && item.visible !== false
   );
+}
 
-  const icon = categoryIcons[categoryKey] || 'utensils-crossed';
-  const iconClass = getCategoryIconClass(categoryKey);
-
-  if (items.length === 0) {
-    return `
-      <div class="menu-category mb-8" id="menu-${categoryKey}">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
-            <i data-lucide="${icon}" class="w-4 h-4 ${iconClass}"></i>
-          </div>
-          <h3 class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</h3>
-          <div class="flex-1 h-px bg-gold/20"></div>
-        </div>
-        <div class="text-center py-8">
-          <p class="text-sm text-cream/50 italic">${t.comingSoon}</p>
-        </div>
-      </div>
-    `;
-  }
-
-  const directItems = items.filter(item => !item.subcategoryId);
+function getMenuSubcategoryGroups(categoryKey) {
+  const items = getMenuCategoryVisibleItems(categoryKey);
   const subcategoryGroups = [];
 
   items
@@ -1240,33 +1223,212 @@ function renderCategory(categoryKey, categoryLabel, t) {
 
   subcategoryGroups.sort((a, b) => a.order - b.order);
 
-  const directItemsHTML = directItems.length
-    ? `
-      <div class="space-y-1">
-        ${directItems.map(item => renderMenuItem(item, t)).join('')}
-      </div>
-    `
-    : '';
+  return subcategoryGroups;
+}
 
-  const subcategoryHTML = subcategoryGroups.map(group => `
-    <div class="mt-5 rounded-2xl border border-gold/15 bg-black/10 overflow-hidden">
-      <div class="px-4 py-3 border-b border-gold/12 bg-gold/5">
-        <div class="flex items-center gap-2">
-          <span class="h-1.5 w-1.5 rounded-full bg-gold/80"></span>
-          <h4 class="text-[13px] font-bold uppercase tracking-[0.16em] text-gold/90">
-            ${group.label}
-          </h4>
-        </div>
-      </div>
+function renderMenuBackButton(label, action) {
+  return `
+    <button
+      type="button"
+      onclick="${action}"
+      class="btn-action mb-5 inline-flex items-center gap-2 rounded-xl border border-gold/35 bg-darkCard px-4 py-2 text-sm font-semibold text-cream/85 hover:bg-gold/10 hover:border-gold transition-all"
+    >
+      <span>←</span>
+      <span>${label}</span>
+    </button>
+  `;
+}
 
-      <div class="space-y-1 px-1 py-1">
-        ${group.items.map(item => renderMenuItem(item, t)).join('')}
+function renderMenuCategoryCards(categoryKeys, t) {
+  if (!categoryKeys.length) {
+    return `
+      <div class="text-center py-8">
+        <p class="text-sm text-cream/50 italic">${t.comingSoon}</p>
       </div>
+    `;
+  }
+
+  return `
+    <div class="grid gap-3">
+      ${categoryKeys.map((categoryKey) => {
+        const categoryLabel = getMenuCategoryLabel(categoryKey);
+        const icon = categoryIcons[categoryKey] || 'utensils-crossed';
+        const iconClass = getCategoryIconClass(categoryKey);
+
+        return `
+          <button
+            type="button"
+            onclick="openMenuCategory('${categoryKey}')"
+            class="btn-action w-full rounded-2xl border border-gold/25 bg-darkCard/80 px-4 py-4 text-left hover:bg-gold/10 hover:border-gold/55 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="${icon}" class="w-5 h-5 ${iconClass}"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</div>
+              </div>
+              <div class="text-gold text-xl">›</div>
+            </div>
+          </button>
+        `;
+      }).join('')}
     </div>
-  `).join('');
+  `;
+}
+
+function renderMenuSubcategoryCards(categoryKey, t) {
+  const categoryLabel = getMenuCategoryLabel(categoryKey);
+  const directItems = getMenuCategoryVisibleItems(categoryKey).filter(item => !item.subcategoryId);
+  const subcategoryGroups = getMenuSubcategoryGroups(categoryKey);
+
+  if (!subcategoryGroups.length) {
+    return renderCategory(categoryKey, categoryLabel, t);
+  }
 
   return `
     <div class="menu-category mb-8" id="menu-${categoryKey}">
+      ${renderMenuBackButton(
+        currentLang === 'es'
+          ? 'Volver a las categorías'
+          : currentLang === 'en'
+            ? 'Back to categories'
+            : currentLang === 'nl'
+              ? 'Terug naar categorieën'
+              : 'Retour aux catégories',
+        'backToMenuCategories()'
+      )}
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="${categoryIcons[categoryKey] || 'utensils-crossed'}" class="w-4 h-4 ${getCategoryIconClass(categoryKey)}"></i>
+        </div>
+        <h3 class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</h3>
+        <div class="flex-1 h-px bg-gold/20"></div>
+      </div>
+
+      <div class="grid gap-3">
+        ${subcategoryGroups.map((group) => `
+          <button
+            type="button"
+            onclick="openMenuSubcategory('${group.id}')"
+            class="btn-action w-full rounded-2xl border border-gold/25 bg-darkCard/80 px-4 py-4 text-left hover:bg-gold/10 hover:border-gold/55 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <div class="h-2 w-2 rounded-full bg-gold/90 flex-shrink-0"></div>
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-bold uppercase tracking-[0.14em] text-gold/95">${group.label}</div>
+              </div>
+              <div class="text-gold text-xl">›</div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+
+      ${directItems.length ? `
+        <div class="mt-6 rounded-2xl border border-gold/15 bg-black/10 px-3 py-3">
+          <div class="space-y-1">
+            ${directItems.map(item => renderMenuItem(item, t)).join('')}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderMenuSubcategoryItems(categoryKey, subcategoryId, t) {
+  const categoryLabel = getMenuCategoryLabel(categoryKey);
+  const group = getMenuSubcategoryGroups(categoryKey).find(item => item.id === subcategoryId);
+
+  if (!group) {
+    selectedMenuSubcategory = null;
+    return renderMenuSubcategoryCards(categoryKey, t);
+  }
+
+  return `
+    <div class="menu-category mb-8" id="menu-${categoryKey}">
+      ${renderMenuBackButton(
+        currentLang === 'es'
+          ? 'Volver a las subcategorías'
+          : currentLang === 'en'
+            ? 'Back to subcategories'
+            : currentLang === 'nl'
+              ? 'Terug naar subcategorieën'
+              : 'Retour aux sous-catégories',
+        'backToMenuSubcategories()'
+      )}
+
+      <div class="mb-5">
+        <div class="text-xs uppercase tracking-[0.18em] text-cream/45">${categoryLabel}</div>
+        <h3 class="font-display text-2xl font-bold text-gold mt-1">${group.label}</h3>
+      </div>
+
+      <div class="rounded-2xl border border-gold/15 bg-black/10 px-2 py-2">
+        <div class="space-y-1">
+          ${group.items.map(item => renderMenuItem(item, t)).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMenuNavigation(categoryKeys, t) {
+  if (selectedMenuCategory && !categoryKeys.includes(selectedMenuCategory)) {
+    selectedMenuCategory = null;
+    selectedMenuSubcategory = null;
+  }
+
+  if (!selectedMenuCategory) {
+    return renderMenuCategoryCards(categoryKeys, t);
+  }
+
+  if (!selectedMenuSubcategory) {
+    return renderMenuSubcategoryCards(selectedMenuCategory, t);
+  }
+
+  return renderMenuSubcategoryItems(selectedMenuCategory, selectedMenuSubcategory, t);
+}
+
+function renderCategory(categoryKey, categoryLabel, t) {
+  const categoryMeta = menuMeta.categories[categoryKey] || {};
+  if (!menuData[categoryKey]) return '';
+  if (categoryMeta.visible === false) return '';
+
+  const items = getMenuCategoryVisibleItems(categoryKey);
+
+  const icon = categoryIcons[categoryKey] || 'utensils-crossed';
+  const iconClass = getCategoryIconClass(categoryKey);
+
+  if (items.length === 0) {
+    return `
+      <div class="menu-category mb-8" id="menu-${categoryKey}">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="${icon}" class="w-4 h-4 ${iconClass}"></i>
+          </div>
+          <h3 class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</h3>
+          <div class="flex-1 h-px bg-gold/20"></div>
+        </div>
+        <div class="text-center py-8">
+          <p class="text-sm text-cream/50 italic">${t.comingSoon}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="menu-category mb-8" id="menu-${categoryKey}">
+      ${renderMenuBackButton(
+        currentLang === 'es'
+          ? 'Volver a las categorías'
+          : currentLang === 'en'
+            ? 'Back to categories'
+            : currentLang === 'nl'
+              ? 'Terug naar categorieën'
+              : 'Retour aux catégories',
+        'backToMenuCategories()'
+      )}
+
       <div class="flex items-center gap-3 mb-4">
         <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
           <i data-lucide="${icon}" class="w-4 h-4 ${iconClass}"></i>
@@ -1275,8 +1437,9 @@ function renderCategory(categoryKey, categoryLabel, t) {
         <div class="flex-1 h-px bg-gold/20"></div>
       </div>
 
-      ${directItemsHTML}
-      ${subcategoryHTML}
+      <div class="space-y-1">
+        ${items.map(item => renderMenuItem(item, t)).join('')}
+      </div>
     </div>
   `;
 }
@@ -3309,6 +3472,8 @@ let bookingMode = false;
 let cart = [];
 let cartPanelOpen = false;
 let activeOrderCategory = 'all';
+let selectedMenuCategory = null;
+let selectedMenuSubcategory = null;
 let orderReviewOpen = false;
 let orderForm = {
   name: '',
@@ -3633,11 +3798,47 @@ function persistClientActiveView() {
     };
 
     function scrollToMenuCategory(categoryKey) {
-      const target = document.getElementById(`menu-${categoryKey}`);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
+  const target = document.getElementById(`menu-${categoryKey}`);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+window.openMenuCategory = function(categoryKey) {
+  selectedMenuCategory = categoryKey;
+  selectedMenuSubcategory = null;
+
+  if (orderMode) {
+    activeOrderCategory = categoryKey;
+  }
+
+  renderMenu();
+  setTimeout(() => scrollToMenuStart(), 80);
+};
+
+window.openMenuSubcategory = function(subcategoryId) {
+  selectedMenuSubcategory = subcategoryId;
+  renderMenu();
+  setTimeout(() => scrollToMenuStart(), 80);
+};
+
+window.backToMenuCategories = function() {
+  selectedMenuCategory = null;
+  selectedMenuSubcategory = null;
+
+  if (orderMode) {
+    activeOrderCategory = 'all';
+  }
+
+  renderMenu();
+  setTimeout(() => scrollToMenuStart(), 80);
+};
+
+window.backToMenuSubcategories = function() {
+  selectedMenuSubcategory = null;
+  renderMenu();
+  setTimeout(() => scrollToMenuStart(), 80);
+};
 
     const allergenVisuals = [
       { key: 'gluten', color: '#B08A22' },
@@ -8467,13 +8668,7 @@ const visibleOrderCategoryKeys =
     ? visibleCategoryKeys.filter(categoryKey => categoryKey === activeOrderCategory)
     : visibleCategoryKeys;
 
-const menuHTML = visibleOrderCategoryKeys
-  .map(categoryKey => {
-    const categoryLabel = getMenuCategoryLabel(categoryKey);
-
-    return renderCategory(categoryKey, categoryLabel, t);
-  })
-  .join('');
+const menuHTML = renderMenuNavigation(visibleOrderCategoryKeys, t);
 
 const cartSummary = calculateCartSummary();
 
@@ -8702,7 +8897,6 @@ ${!orderMode ? renderInfoBlocks() : ''}
 
   ${orderMode && !cartPanelOpen ? `
     <div class="w-full max-w-3xl mx-auto mt-6">
-      ${renderOrderCategoryFilter(visibleCategoryKeys, t)}
       ${menuHTML}
     </div>
   ` : ''}

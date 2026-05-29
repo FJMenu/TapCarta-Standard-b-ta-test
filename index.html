@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V2.2.1.1';
+    const APP_VERSION = 'V2.2.1.2';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1154,14 +1154,99 @@ function getTranslatedMenuField(source, field) {
   return '';
 }
 
-function getMenuCategoryLabel(categoryKey) {
+function renderCategory(categoryKey, categoryLabel, t) {
   const categoryMeta = menuMeta.categories[categoryKey] || {};
+  if (!menuData[categoryKey]) return '';
+  if (categoryMeta.visible === false) return '';
 
-  return (
-    getTranslatedMenuField(categoryMeta, 'name') ||
-    translations[currentLang]?.[categoryKey] ||
-    categoryKey
+  const items = (menuData[categoryKey] || []).filter(
+    item => item && item.visible !== false
   );
+
+  const icon = categoryIcons[categoryKey] || 'utensils-crossed';
+  const iconClass = getCategoryIconClass(categoryKey);
+
+  if (items.length === 0) {
+    return `
+      <div class="menu-category mb-8" id="menu-${categoryKey}">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="${icon}" class="w-4 h-4 ${iconClass}"></i>
+          </div>
+          <h3 class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</h3>
+          <div class="flex-1 h-px bg-gold/20"></div>
+        </div>
+        <div class="text-center py-8">
+          <p class="text-sm text-cream/50 italic">${t.comingSoon}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const directItems = items.filter(item => !item.subcategoryId);
+  const subcategoryGroups = [];
+
+  items
+    .filter(item => item.subcategoryId)
+    .forEach((item) => {
+      const existingGroup = subcategoryGroups.find(group => group.id === item.subcategoryId);
+
+      if (existingGroup) {
+        existingGroup.items.push(item);
+        return;
+      }
+
+      const subcategoryMeta = menuMeta.subcategories?.[item.subcategoryId] || {};
+
+      subcategoryGroups.push({
+        id: item.subcategoryId,
+        label: getMenuSubcategoryLabel(item.subcategoryId, item),
+        order: Number.isFinite(subcategoryMeta.order) ? subcategoryMeta.order : 9999,
+        items: [item]
+      });
+    });
+
+  subcategoryGroups.sort((a, b) => a.order - b.order);
+
+  const directItemsHTML = directItems.length
+    ? `
+      <div class="space-y-1">
+        ${directItems.map(item => renderMenuItem(item, t)).join('')}
+      </div>
+    `
+    : '';
+
+  const subcategoryHTML = subcategoryGroups.map(group => `
+    <div class="mt-5 rounded-2xl border border-gold/15 bg-black/10 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gold/12 bg-gold/5">
+        <div class="flex items-center gap-2">
+          <span class="h-1.5 w-1.5 rounded-full bg-gold/80"></span>
+          <h4 class="text-[13px] font-bold uppercase tracking-[0.16em] text-gold/90">
+            ${group.label}
+          </h4>
+        </div>
+      </div>
+
+      <div class="space-y-1 px-1 py-1">
+        ${group.items.map(item => renderMenuItem(item, t)).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="menu-category mb-8" id="menu-${categoryKey}">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="${icon}" class="w-4 h-4 ${iconClass}"></i>
+        </div>
+        <h3 class="font-display text-lg font-bold text-cream tracking-wide uppercase">${categoryLabel}</h3>
+        <div class="flex-1 h-px bg-gold/20"></div>
+      </div>
+
+      ${directItemsHTML}
+      ${subcategoryHTML}
+    </div>
+  `;
 }
 
 function getMenuItemLabel(item) {

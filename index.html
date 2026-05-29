@@ -6,7 +6,7 @@
   <title>TapCarta Demo</title>
 
   <script>
-    const APP_VERSION = 'V2.2.1.2';
+    const APP_VERSION = 'V2.3.1.1';
 const TAPCARTA_PUBLIC_LOGO_URL = 'https://i.postimg.cc/xjtDSCW8/logo-app-web-sans-fond.png';
 const LIVE_REQUESTS_ENABLED = true;
 let LIVE_RESTAURANT_ID = '';
@@ -1153,7 +1153,27 @@ function getTranslatedMenuField(source, field) {
 
   return '';
 }
+function getMenuCategoryLabel(categoryKey) {
+  const categoryMeta = menuMeta.categories[categoryKey] || {};
 
+  return (
+    getTranslatedMenuField(categoryMeta, 'name') ||
+    translations[currentLang]?.[categoryKey] ||
+    categoryKey
+  );
+}
+
+function getMenuSubcategoryLabel(subcategoryId, item = null) {
+  const subcategoryMeta = menuMeta.subcategories?.[subcategoryId] || {};
+
+  return (
+    getTranslatedMenuField(subcategoryMeta, 'name') ||
+    getTranslatedMenuField(item, 'subcategoryName') ||
+    item?.subcategoryName ||
+    subcategoryMeta.name ||
+    ''
+  );
+}
 function renderCategory(categoryKey, categoryLabel, t) {
   const categoryMeta = menuMeta.categories[categoryKey] || {};
   if (!menuData[categoryKey]) return '';
@@ -1484,7 +1504,304 @@ function isStandardQuickModuleVisible(value, fallback = true) {
 
   return value !== 'hidden';
 }
+function normalizeStandardExternalUrl(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
 
+  if (raw.startsWith('/')) {
+    return `${window.location.origin}${raw}`;
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  return '';
+}
+
+function getStandardComplementaryLinkLabel(link, fallbackLabel) {
+  const label = link?.label;
+
+  if (label && typeof label === 'object') {
+    return (
+      label[currentLang] ||
+      label.fr ||
+      label.es ||
+      label.en ||
+      label.nl ||
+      fallbackLabel
+    );
+  }
+
+  if (typeof label === 'string' && label.trim()) {
+    return label.trim();
+  }
+
+  return fallbackLabel;
+}
+
+function normalizeStandardComplementaryLinks(source) {
+  const links = source && typeof source === 'object' ? source : {};
+
+  return {
+    linkedRestaurant: {
+      enabled: links.linkedRestaurant?.enabled === true,
+      url: normalizeStandardExternalUrl(links.linkedRestaurant?.url),
+      label: links.linkedRestaurant?.label || ''
+    },
+    website: {
+      enabled: links.website?.enabled === true,
+      url: normalizeStandardExternalUrl(links.website?.url),
+      label: links.website?.label || ''
+    }
+  };
+}
+
+function getVisibleStandardComplementaryLinks() {
+  const links = siteConfig.complementaryLinks || {};
+  const result = [];
+
+  if (links.linkedRestaurant?.enabled && links.linkedRestaurant?.url) {
+    result.push({
+      key: 'linkedRestaurant',
+      icon: 'store',
+      url: links.linkedRestaurant.url,
+      label: getStandardComplementaryLinkLabel(
+        links.linkedRestaurant,
+        currentLang === 'es'
+          ? 'Otro restaurante'
+          : currentLang === 'en'
+            ? 'Other restaurant'
+            : currentLang === 'nl'
+              ? 'Andere zaak'
+              : 'Autre restaurant'
+      )
+    });
+  }
+
+  if (links.website?.enabled && links.website?.url) {
+    result.push({
+      key: 'website',
+      icon: 'globe-2',
+      url: links.website.url,
+      label: getStandardComplementaryLinkLabel(
+        links.website,
+        currentLang === 'es'
+          ? 'Web / Eventos'
+          : currentLang === 'en'
+            ? 'Website / Events'
+            : currentLang === 'nl'
+              ? 'Website / Events'
+              : 'Site web / Événements'
+      )
+    });
+  }
+
+  return result;
+}
+function getStandardComplementaryLinksTitle() {
+  return currentLang === 'es'
+    ? 'Enlaces complementarios'
+    : currentLang === 'en'
+      ? 'Additional links'
+      : currentLang === 'nl'
+        ? 'Aanvullende links'
+        : 'Liens complémentaires';
+}
+
+function renderStandardActionRow(buttons, compact = false) {
+  const visibleButtons = buttons.filter(Boolean);
+
+  if (!visibleButtons.length) {
+    return '';
+  }
+
+  const gridClass = visibleButtons.length === 1
+    ? 'grid grid-cols-1'
+    : 'grid grid-cols-2';
+
+  const widthClass = compact
+    ? 'max-w-[420px]'
+    : 'max-w-[560px]';
+
+  return `
+    <div class="${gridClass} gap-3 ${widthClass} mx-auto">
+      ${visibleButtons.join('')}
+    </div>
+  `;
+}
+
+function getStandardMainButtonClass() {
+  return 'btn-action group min-h-[58px] w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-br from-gold/18 to-gold/8 border-2 border-gold/55 hover:border-gold hover:from-gold/26 hover:to-gold/12 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20';
+}
+
+function getStandardStandbyButtonClass() {
+  return 'btn-action group min-h-[58px] w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-br from-[#241B0B] via-[#17130C] to-[#0F0F0F] border-2 border-gold/45 hover:border-gold/75 hover:from-[#2E220D] hover:via-[#1C160D] hover:to-[#101010] transition-all shadow-lg shadow-black/35 hover:shadow-xl hover:shadow-gold/12';
+}
+
+function getStandardSmallButtonClass() {
+  return 'btn-action group min-h-[48px] w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-darkCard/90 border border-gold/25 text-cream/85 hover:border-gold/45 hover:bg-darkCard transition-all shadow-sm';
+}
+
+function renderStandardOrderButton(t) {
+  if (!siteConfig.modules?.ordering) return '';
+
+  if (siteConfig.moduleStatuses?.ordering === 'standby') {
+    return `
+      <button onclick="openClientStandbyServiceModal('order')" class="${getStandardStandbyButtonClass()}">
+        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold/75 group-hover:text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream/85 group-hover:text-cream tracking-wide">${t.orderButton}</span>
+      </button>
+    `;
+  }
+
+  return `
+    <button onclick="handleOrderEntryClick()" class="${getStandardMainButtonClass()}">
+      <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
+    </button>
+  `;
+}
+
+function renderStandardBookingButton(t) {
+  if (!siteConfig.modules?.booking) return '';
+
+  if (siteConfig.moduleStatuses?.booking === 'standby') {
+    return `
+      <button onclick="openClientStandbyServiceModal('booking')" class="${getStandardStandbyButtonClass()}">
+        <i data-lucide="calendar-days" class="w-5 h-5 text-gold/75 group-hover:text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream/85 group-hover:text-cream tracking-wide">${t.bookingButton}</span>
+      </button>
+    `;
+  }
+
+  return `
+    <button onclick="handleBookingEntryClick()" class="${getStandardMainButtonClass()}">
+      <i data-lucide="calendar-days" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-sm font-semibold text-cream tracking-wide">${t.bookingButton}</span>
+    </button>
+  `;
+}
+
+function renderStandardPhoneButton(t) {
+  if (!siteConfig.modules?.phone || !siteConfig.phoneHref) return '';
+
+  return `
+    <a href="${siteConfig.phoneHref}" class="${getStandardMainButtonClass()}">
+      <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-sm font-semibold text-cream tracking-wide">${t.call}</span>
+    </a>
+  `;
+}
+
+function renderStandardWhatsappButton(t) {
+  if (!siteConfig.modules?.whatsapp || !siteConfig.whatsappHref) return '';
+
+  return `
+    <a href="${siteConfig.whatsappHref}" target="_blank" rel="noopener noreferrer" class="${getStandardMainButtonClass()}">
+      <i data-lucide="message-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-sm font-semibold text-cream tracking-wide">${t.whatsapp}</span>
+    </a>
+  `;
+}
+
+function renderStandardDirectionsButton(t) {
+  if (!siteConfig.modules?.directions) return '';
+
+  const directionsUrl =
+    siteConfig.directionsHref ||
+    siteConfig.googleMapsUrl ||
+    siteConfig.publicRestaurant?.google_maps_url ||
+    '';
+
+  if (directionsUrl) {
+    return `
+      <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="${getStandardMainButtonClass()} max-w-[420px] mx-auto">
+        <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
+      </a>
+    `;
+  }
+
+  return `
+    <button onclick="scrollToAddress()" class="${getStandardMainButtonClass()} max-w-[420px] mx-auto">
+      <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+      <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
+    </button>
+  `;
+}
+
+function renderStandardComplementaryLinksSection() {
+  const links = getVisibleStandardComplementaryLinks();
+
+  if (!links.length) {
+    return '';
+  }
+
+  return `
+    <div class="pt-3">
+      <div class="flex items-center justify-center gap-3 max-w-[560px] mx-auto mb-3">
+        <div class="h-px flex-1 bg-gold/35"></div>
+        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-gold/90 whitespace-nowrap">
+          ${getStandardComplementaryLinksTitle()}
+        </div>
+        <div class="h-px flex-1 bg-gold/35"></div>
+      </div>
+
+      ${renderStandardActionRow(links.map(link => `
+        <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="${getStandardMainButtonClass()}">
+          <i data-lucide="${link.icon}" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
+          <span class="text-sm font-semibold text-cream tracking-wide">${link.label}</span>
+        </a>
+      `))}
+    </div>
+  `;
+}
+
+function renderStandardInstallShareRow(t) {
+  return renderStandardActionRow([
+    `
+      <button id="install-app-btn" hidden onclick="handleInstallClick()" class="${getStandardSmallButtonClass()}">
+        <i data-lucide="download" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-xs font-medium tracking-wide">${t.installApp}</span>
+      </button>
+    `,
+    `
+      <button onclick="handleShareRestaurantClick()" class="${getStandardSmallButtonClass()}">
+        <i data-lucide="share-2" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
+        <span class="text-xs font-medium tracking-wide">${t.shareRestaurant}</span>
+      </button>
+    `
+  ], true);
+}
+
+function renderStandardMainActionsSection(t) {
+  return `
+    <section class="px-6 py-6 animate-fade-up delay-1">
+      <div class="space-y-4">
+        ${renderStandardActionRow([
+          renderStandardOrderButton(t),
+          renderStandardBookingButton(t)
+        ])}
+
+        ${renderStandardActionRow([
+          renderStandardPhoneButton(t),
+          renderStandardWhatsappButton(t)
+        ])}
+
+        ${renderStandardDirectionsButton(t)}
+
+        ${renderStandardComplementaryLinksSection()}
+
+        ${renderStandardInstallShareRow(t)}
+      </div>
+
+      <div id="ios-install-help" hidden class="mt-3 p-4 rounded-lg bg-darkCard border border-gold/20 text-sm text-cream/80">
+        ${t.iosInstallHelp}
+      </div>
+    </section>
+  `;
+}
 function normalizeStandardCustomerMessages(messages) {
   if (!Array.isArray(messages)) return [];
 
@@ -1945,7 +2262,9 @@ function applyStandardRestaurantSettings(settingsRow) {
   if (whatsappHref) {
     siteConfig.whatsappHref = whatsappHref;
   }
-
+  siteConfig.complementaryLinks = normalizeStandardComplementaryLinks(
+    contact.externalLinks || contact.complementaryLinks || {}
+  );
   const modules = settingsRow.modules_json && typeof settingsRow.modules_json === 'object'
     ? settingsRow.modules_json
     : {};
@@ -8325,83 +8644,7 @@ ${bookingMode ? `
   </div>
 ` : ''}
 
- ${!orderMode ? `
-  <section class="px-6 py-6 animate-fade-up delay-1">
-    <div class="flex justify-center gap-4 flex-wrap">
-      ${siteConfig.modules?.ordering ? (
-        siteConfig.moduleStatuses?.ordering === 'standby' ? `
-      <button onclick="openClientStandbyServiceModal('order')" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-[#241B0B] via-[#17130C] to-[#0F0F0F] border-2 border-gold/45 hover:border-gold/75 hover:from-[#2E220D] hover:via-[#1C160D] hover:to-[#101010] transition-all shadow-lg shadow-black/35 hover:shadow-xl hover:shadow-gold/12">
-        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold/70 group-hover:text-gold/95 group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream/80 group-hover:text-cream tracking-wide">${t.orderButton}</span>
-      </button>
-        ` : `
-      <button onclick="handleOrderEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/20 to-gold/10 border-2 border-gold hover:border-gold hover:from-gold/30 hover:to-gold/15 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="shopping-bag" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.orderButton}</span>
-      </button>
-        `
-      ) : ''}
-
-      ${siteConfig.modules?.booking ? (
-        siteConfig.moduleStatuses?.booking === 'standby' ? `
-      <button onclick="openClientStandbyServiceModal('booking')" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-[#241B0B] via-[#17130C] to-[#0F0F0F] border-2 border-gold/45 hover:border-gold/75 hover:from-[#2E220D] hover:via-[#1C160D] hover:to-[#101010] transition-all shadow-lg shadow-black/35 hover:shadow-xl hover:shadow-gold/12">
-        <i data-lucide="calendar-days" class="w-5 h-5 text-gold/70 group-hover:text-gold/95 group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream/80 group-hover:text-cream tracking-wide">${t.bookingButton}</span>
-      </button>
-        ` : `
-      <button onclick="handleBookingEntryClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="calendar-days" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.bookingButton}</span>
-      </button>
-        `
-      ) : ''}
-
-      ${siteConfig.modules?.phone && siteConfig.phoneHref ? `
-      <a href="${siteConfig.phoneHref}" class="btn-action group flex lg:hidden items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="phone" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.call}</span>
-      </a>
-      ` : ''}
-
-      ${siteConfig.modules?.directions ? `
-      <button onclick="scrollToAddress()" class="btn-action group hidden lg:flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="map" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.addressButton}</span>
-      </button>
-      ` : ''}
-
-    ${siteConfig.modules?.whatsapp && siteConfig.whatsappHref ? `
-  <a href="${siteConfig.whatsappHref}" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-    <i data-lucide="message-circle" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-    <span class="text-sm font-semibold text-cream tracking-wide">${t.whatsapp}</span>
-  </a>
-` : ''}
-
-      ${siteConfig.modules?.directions ? `
-      <a href="https://maps.app.goo.gl/w1YhWUqoJ6qp8KDF9" target="_blank" rel="noopener noreferrer" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="map-pin" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.directions}</span>
-      </a>
-      ` : ''}
-
-      <button onclick="handleShareRestaurantClick()" class="btn-action group flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-br from-gold/15 to-gold/5 border-2 border-gold/50 hover:border-gold hover:from-gold/25 hover:to-gold/10 transition-all shadow-lg hover:shadow-xl hover:shadow-gold/20">
-        <i data-lucide="share-2" class="w-5 h-5 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-sm font-semibold text-cream tracking-wide">${t.shareRestaurant} ${siteConfig.restaurantName || siteConfig.identity?.name || ''}</span>
-      </button>
-    </div>
-
-    <div class="mt-4 flex justify-center gap-3 flex-wrap">
-      <button id="install-app-btn" hidden onclick="handleInstallClick()" class="btn-action group flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-darkCard/90 border border-gold/25 text-cream/85 hover:border-gold/45 hover:bg-darkCard transition-all shadow-sm">
-        <i data-lucide="download" class="w-4 h-4 text-gold group-hover:scale-110 transition-transform"></i>
-        <span class="text-xs font-medium tracking-wide">${t.installApp}</span>
-      </button>
-    </div>
-
-    <div id="ios-install-help" hidden class="mt-3 p-4 rounded-lg bg-darkCard border border-gold/20 text-sm text-cream/80">
-      ${t.iosInstallHelp}
-    </div>
-  </section>
-` : ''}
+${!orderMode ? renderStandardMainActionsSection(t) : ''}
 
 ${orderMode && !cartPanelOpen && cartSummary.itemCount > 0 ? `
   <div class="fixed right-4 bottom-4 z-40">
